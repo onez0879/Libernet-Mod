@@ -1,0 +1,11 @@
+# Router-specific state. Never publish credentials, generated caches, or logs.
+package/libernet-mod/files/root/libernet/system/config.json
+package/libernet-mod/files/root/libernet/cache.db
+package/libernet-mod/files/root/libernet/system/cache.db
+package/libernet-mod/files/root/libernet/log/*.log
+
+# Known test/connection profiles: review them before adding to Git.
+package/libernet-mod/files/root/libernet/bin/config/**/tes.json
+package/libernet-mod/files/root/libernet/bin/config/**/testing.json
+package/libernet-mod/files/root/libernet/bin/config/**/biz*.json
+package/libernet-mod/files/root/libernet/bin/config/**/IG.json
