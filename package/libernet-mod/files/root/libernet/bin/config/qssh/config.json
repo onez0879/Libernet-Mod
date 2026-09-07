@@ -1,0 +1,41 @@
+{
+    "listen": {
+        "host": "127.0.0.1",
+        "port": 1080
+    },
+    "concurrency": {
+        "enable": true,
+        "workers": 2,
+        "start_port": 1080
+    },
+    "ssh": {
+        "host": "eh.xtun.biz.id",
+        "ip": "103.127.96.23",
+        "port": 80,
+        "username": "deni",
+        "password": "belekok"
+    },
+    "network": {
+        "type": "tcp"
+    },
+    "transport": {
+        "tls": false,
+        "host": "",
+        "path": "/",
+        "sni": ""
+    },
+    "proxy": {
+        "enable": true,
+        "host": "support.udemy.com",
+        "port": 80
+    },
+    "payload": {
+        "enable": true,
+        "request": "GET / HTTP/1.1[crlf]Host: audisi.ruangguru.com[crlf][crlf]PATCH / HTTP/1.1[crlf]Host: [host][crlf]Upgrade: websocket[crlf][crlf][split]HTTP/ 69[crlf][crlf]",
+        "expect": [
+            "200",
+            "101"
+        ]
+    },
+    "qload_port": 7777
+}

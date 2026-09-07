@@ -1,0 +1,1 @@
+default via 172.21.35.153 dev usb0 proto static src 172.21.35.42
