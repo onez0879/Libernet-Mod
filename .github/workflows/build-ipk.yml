@@ -1,0 +1,59 @@
+name: Build Libernet-Mod IPK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "package/libernet-mod/**"
+      - ".github/workflows/build-ipk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: OpenWrt 24.10 ARM64 package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      SDK_URL: https://downloads.openwrt.org/releases/24.10.0/targets/armsr/armv8/openwrt-sdk-24.10.0-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install extractor
+        run: sudo apt-get update && sudo apt-get install --yes zstd
+
+      - name: Download OpenWrt SDK
+        run: |
+          curl --fail --location --retry 3 "$SDK_URL" --output sdk.tar.zst
+          SDK_DIR="$(tar --use-compress-program=unzstd -tf sdk.tar.zst | head -n 1 | cut -d/ -f1)"
+          tar --use-compress-program=unzstd -xf sdk.tar.zst
+          echo "SDK_DIR=$SDK_DIR" >> "$GITHUB_ENV"
+
+      - name: Add package source
+        run: |
+          mkdir -p "$SDK_DIR/package/libernet-mod"
+          cp -a package/libernet-mod/. "$SDK_DIR/package/libernet-mod/"
+
+      - name: Build IPK
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          make defconfig
+          make package/libernet-mod/compile V=s -j"$(nproc)"
+
+      - name: Collect package
+        run: |
+          mkdir -p artifacts
+          find "$SDK_DIR/bin/packages" -type f -name 'libernet-mod_*.ipk' -exec cp {} artifacts/ \;
+          test -n "$(find artifacts -type f -name '*.ipk' -print -quit)"
+
+      - name: Upload IPK
+        uses: actions/upload-artifact@v4
+        with:
+          name: libernet-mod-ipk-openwrt-24.10-arm64
+          path: artifacts/*.ipk
+          if-no-files-found: error
+          retention-days: 30
