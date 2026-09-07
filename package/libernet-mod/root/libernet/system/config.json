@@ -1,0 +1,74 @@
+{
+    "tunnel": {
+        "autostart": false,
+        "mode": 1,
+        "profile": {
+            "ssh": "biz1",
+            "v2ray": "biz_tayo",
+            "qssh": "xl_edu"
+        }
+    },
+    "server": "103.197.188.84",
+    "cdn_server": "",
+    "dns_servers": [],
+    "proxy_servers": [],
+    "network": {
+        "tun": {
+            "dev": "tun1",
+            "mtu": 1420,
+            "address": "10.0.0.2",
+            "gateway": "10.0.0.1",
+            "netmask": "255.255.255.0"
+        },
+        "socks": {
+            "ip": "127.0.0.1",
+            "port": 1080
+        },
+        "qload": {
+            "port": 7777
+        },
+        "udpgw": {
+            "ip": "127.0.0.1",
+            "port": 7200
+        }
+    },
+    "system": {
+        "username": "admin",
+        "password": "libernet"
+    },
+    "settings": {
+        "ping": {
+            "enable": true,
+            "host": "bing.com",
+            "interval": 30,
+            "timeout": 5,
+            "fail_count": 3,
+            "log_interval": 5
+        },
+        "autoreconnect": {
+            "enable": false,
+            "host": "ip.sb",
+            "interval": 10,
+            "retry": 3
+        },
+        "autoswitch": {
+            "enable": false
+        },
+        "memory": {
+            "enable": true,
+            "interval": 60,
+            "minimum_free": 50
+        },
+        "dns": {
+            "enable": null,
+            "primary": "1.1.1.1",
+            "secondary": "8.8.8.8"
+        },
+        "mihomo": {
+            "mixed_port": 7890,
+            "redir_port": 7892,
+            "dns_port": 1053,
+            "fake_ip": "198.18.0.1/16"
+        }
+    }
+}

@@ -1,0 +1,161 @@
+mixed-port: 7890
+redir-port: 7892
+allow-lan: true
+bind-address: "*"
+mode: rule
+log-level: info
+
+external-controller: 0.0.0.0:9090
+external-ui: config/ui/yacd
+secret: ""
+
+unified-delay: true
+tcp-concurrent: true
+find-process-mode: strict
+
+sniffer:
+  enable: true
+  sniff:
+    HTTP:
+      ports:
+        - 80
+        - 8080-8880
+    TLS:
+      ports:
+        - 443
+        - 8443
+    QUIC:
+      ports:
+        - 443
+  force-dns-mapping: true
+  parse-pure-ip: true
+
+proxies:
+  - name: "Mihomo"
+    type: socks5
+    server: 127.0.0.1
+    port: 7777
+    udp: true
+
+proxy-groups:
+  - name: "Mihomo Tunnel"
+    type: select
+    proxies:
+      - "Mihomo"
+tun:
+  enable: true
+  stack: mixed
+  auto-route: true
+  auto-detect-interface: true
+  strict-route: false
+  prefer-h3: true
+  dns-hijack:
+    - any:53
+    
+dns:
+  enable: true
+  ipv6: false
+  enhanced-mode: redir-host
+  listen: 0.0.0.0:1053
+  default-nameserver:
+  - 8.8.8.8 #google
+  - 8.8.4.4 #google
+  - 1.1.1.1 #cloudflare
+  - 1.0.0.1 #cloudflare
+  - 9.9.9.9 #quaddns
+  - 9.9.9.11 #quaddns
+
+  fallback-filter:
+    geoip: false
+    geoip-code: ID
+    ipcidr:
+    - 0.0.0.0/8
+    - 10.0.0.0/8
+    - 100.64.0.0/10
+    - 127.0.0.0/8
+    - 169.254.0.0/16
+    - 172.16.0.0/12
+    - 192.0.0.0/24
+    - 192.0.2.0/24
+    - 192.88.99.0/24
+    - 192.168.0.0/16
+    - 198.18.0.0/15
+    - 198.51.100.0/24
+    - 203.0.113.0/24
+    - 224.0.0.0/4
+    - 240.0.0.0/4
+    - 255.255.255.255/32
+    domain:
+    - "+.google.com"
+    - "+.facebook.com"
+    - "+.youtube.com"
+    - "+.githubusercontent.com"
+    - "+.googlevideo.com"
+  nameserver:
+  - 8.8.8.8 #google
+  - 8.8.4.4 #google
+  - 1.1.1.1 #cloudflare
+  - 1.0.0.1 #cloudflare
+  - 9.9.9.9 #quaddns
+  - 9.9.9.11 #quaddns
+
+  fallback:
+  - 8.8.8.8
+  - 1.1.1.1
+  - 9.9.9.9
+profile:
+  store-selected: true
+  store-fake-ip: false
+  
+
+  
+rule-providers:
+  oisd_small:
+    type: http
+    behavior: domain
+    format: text
+    path: "./rule_provider/oisd_small.txt"
+    url: https://raw.githubusercontent.com/zzzt27/clash-AdsBlock/main/oisd_small.txt
+    interval: 86400  
+
+  oisd_big:
+    type: http
+    behavior: domain
+    format: text
+    path: "./rule_provider/oisd_big.txt"
+    url: https://raw.githubusercontent.com/zzzt27/clash-AdsBlock/main/oisd_big.txt
+    interval: 86400
+
+
+  oisd_nsfw_small🔞:
+    type: http
+    behavior: domain
+    format: text
+    path: "./rule_provider/oisd_nsfw_small.txt"
+    url: https://raw.githubusercontent.com/zzzt27/clash-AdsBlock/main/oisd_nsfw_small.txt
+    interval: 86400
+
+  ABPindo:
+    type: http
+    behavior: domain
+    format: text
+    path: "./rule_provider/ABPindo.txt"
+    url: https://raw.githubusercontent.com/zzzt27/clash-AdsBlock/main/ABPindo.txt
+    interval: 86400   
+    
+  adblock:
+    type: file
+    behavior: classical
+    path: "./rule_provider/adblock.yaml"   
+    
+rules:
+  - RULE-SET,oisd_small,REJECT
+  - RULE-SET,oisd_big,REJECT
+  - RULE-SET,oisd_nsfw_small🔞,REJECT
+  - RULE-SET,ABPindo,REJECT
+  - RULE-SET,adblock,REJECT
+  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+  - MATCH,Mihomo Tunnel
