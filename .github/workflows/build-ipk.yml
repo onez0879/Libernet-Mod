@@ -28,9 +28,11 @@ jobs:
 
       - name: Download OpenWrt SDK
         run: |
+          set -euo pipefail
           curl --fail --location --retry 3 "$SDK_URL" --output sdk.tar.zst
-          SDK_DIR="$(tar --use-compress-program=unzstd -tf sdk.tar.zst | head -n 1 | cut -d/ -f1)"
+          SDK_DIR="openwrt-sdk-24.10.0-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64"
           tar --use-compress-program=unzstd -xf sdk.tar.zst
+          test -d "$SDK_DIR"
           echo "SDK_DIR=$SDK_DIR" >> "$GITHUB_ENV"
 
       - name: Add package source
