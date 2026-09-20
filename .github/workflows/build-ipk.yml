@@ -16,41 +16,80 @@ jobs:
     name: OpenWrt 24.10 ARM64 package
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+
     env:
       SDK_URL: https://downloads.openwrt.org/releases/24.10.0/targets/armsr/armv8/openwrt-sdk-24.10.0-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+      SDK_DIR: openwrt-sdk-24.10.0-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Install extractor
-        run: sudo apt-get update && sudo apt-get install --yes zstd
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zstd file
 
       - name: Download OpenWrt SDK
         run: |
-          set -euo pipefail
-          curl --fail --location --retry 3 "$SDK_URL" --output sdk.tar.zst
-          SDK_DIR="openwrt-sdk-24.10.0-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64"
+          set -euxo pipefail
+
+          curl \
+            --fail \
+            --location \
+            --retry 5 \
+            --retry-delay 3 \
+            "$SDK_URL" \
+            --output sdk.tar.zst
+
           tar --use-compress-program=unzstd -xf sdk.tar.zst
           test -d "$SDK_DIR"
-          echo "SDK_DIR=$SDK_DIR" >> "$GITHUB_ENV"
 
       - name: Add package source
         run: |
+          set -eux
+
           mkdir -p "$SDK_DIR/package/libernet-mod"
-          cp -a package/libernet-mod/. "$SDK_DIR/package/libernet-mod/"
+          cp -a package/libernet-mod/. \
+            "$SDK_DIR/package/libernet-mod/"
+
+      - name: Update feeds
+        working-directory: ${{ env.SDK_DIR }}
+        run: |
+          set -eux
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
 
       - name: Build IPK
         working-directory: ${{ env.SDK_DIR }}
         run: |
-          make defconfig
-          make package/libernet-mod/compile V=s -j"$(nproc)"
+          set -eux
 
-      - name: Collect package
+          make defconfig
+
+          make package/libernet-mod/compile \
+            V=s \
+            -j"$(nproc)"
+
+      - name: Inspect package
         run: |
+          set -eux
+
           mkdir -p artifacts
-          find "$SDK_DIR/bin/packages" -type f -name 'libernet-mod_*.ipk' -exec cp {} artifacts/ \;
-          test -n "$(find artifacts -type f -name '*.ipk' -print -quit)"
+
+          find "$SDK_DIR/bin/packages" \
+            -type f \
+            -name 'libernet-mod_*.ipk' \
+            -print \
+            -exec cp {} artifacts/ \;
+
+          echo "=== Generated IPK ==="
+          ls -lah artifacts
+
+          echo "=== Package architecture ==="
+          file artifacts/*.ipk
+
+          test -n "$(find artifacts -name 'libernet-mod_*.ipk' -print -quit)"
 
       - name: Upload IPK
         uses: actions/upload-artifact@v4
