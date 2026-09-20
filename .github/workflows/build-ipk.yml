@@ -6,10 +6,11 @@ on:
     paths:
       - "package/libernet-mod/**"
       - ".github/workflows/build-ipk.yml"
+
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -20,6 +21,28 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Read package version
+        id: package_info
+        run: |
+          PKG_VERSION=$(sed -n 's/^PKG_VERSION:=[[:space:]]*//p' package/libernet-mod/Makefile | head -n1)
+          PKG_RELEASE=$(sed -n 's/^PKG_RELEASE:=[[:space:]]*//p' package/libernet-mod/Makefile | head -n1)
+
+          if [ -z "$PKG_VERSION" ]; then
+            echo "ERROR: PKG_VERSION not found"
+            exit 1
+          fi
+
+          if [ -z "$PKG_RELEASE" ]; then
+            echo "ERROR: PKG_RELEASE not found"
+            exit 1
+          fi
+
+          echo "PKG_VERSION=$PKG_VERSION"
+          echo "PKG_RELEASE=$PKG_RELEASE"
+
+          echo "PKG_VERSION=$PKG_VERSION" >> "$GITHUB_ENV"
+          echo "PKG_RELEASE=$PKG_RELEASE" >> "$GITHUB_ENV"
 
       - name: Install build tools
         run: |
@@ -38,32 +61,91 @@ jobs:
           SDK_DIR: openwrt-sdk-24.10.0-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64
         run: |
           wget -q --show-progress "$SDK_URL" -O sdk.tar.zst
-          tar --use-compress-program=unzstd -xf sdk.tar.zst
+
+          tar \
+            --use-compress-program=unzstd \
+            -xf sdk.tar.zst
+
+          rm -f sdk.tar.zst
 
       - name: Copy Libernet-Mod package
         env:
           SDK_DIR: openwrt-sdk-24.10.0-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64
         run: |
           rm -rf "$SDK_DIR/package/libernet-mod"
+
           mkdir -p "$SDK_DIR/package/libernet-mod"
-          cp -a package/libernet-mod/. "$SDK_DIR/package/libernet-mod/"
+
+          cp -a package/libernet-mod/. \
+            "$SDK_DIR/package/libernet-mod/"
 
       - name: Build Libernet-Mod
         env:
           SDK_DIR: openwrt-sdk-24.10.0-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64
         run: |
           cd "$SDK_DIR"
+
           make defconfig
+
           make package/libernet-mod/compile V=s -j2
 
-      - name: Find IPK
+      - name: Find built IPK
         run: |
-          echo "=== Built packages ==="
-          find . -type f -name "libernet-mod_*.ipk" -print
+          echo "======================================"
+          echo "Built Libernet-Mod packages"
+          echo "======================================"
 
-      - name: Upload IPK
+          find . \
+            -type f \
+            -name "libernet-mod_*.ipk" \
+            -print
+
+          IPK=$(find . \
+            -type f \
+            -name "libernet-mod_*.ipk" \
+            | head -n1)
+
+          if [ -z "$IPK" ]; then
+            echo "ERROR: IPK not found!"
+            exit 1
+          fi
+
+          echo "IPK found:"
+          echo "$IPK"
+
+          cp "$IPK" ./libernet-mod_${PKG_VERSION}-${PKG_RELEASE}_aarch64_generic.ipk
+
+          echo "Final package:"
+          ls -lh ./libernet-mod_*.ipk
+
+      - name: Upload IPK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: libernet-mod-ipk
+          name: libernet-mod-${{ env.PKG_VERSION }}-${{ env.PKG_RELEASE }}
           path: |
-            **/libernet-mod_*.ipk
+            libernet-mod_*.ipk
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.PKG_VERSION }}-${{ env.PKG_RELEASE }}
+          name: Libernet-Mod ${{ env.PKG_VERSION }}-${{ env.PKG_RELEASE }}
+          body: |
+            ## Libernet-Mod ${{ env.PKG_VERSION }}-${{ env.PKG_RELEASE }}
+
+            OpenWrt 24.10 ARM64 package.
+
+            **Architecture:** `aarch64_generic`
+
+            **Package:**
+            `libernet-mod_${{ env.PKG_VERSION }}-${{ env.PKG_RELEASE }}_aarch64_generic.ipk`
+
+            Runtime dependencies are intentionally not bundled.
+            Install the required dependencies separately on the OpenWrt device.
+          files: |
+            libernet-mod_*.ipk
+          fail_on_unmatched_files: true
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
