@@ -25,9 +25,9 @@ define Package/libernet-mod/description
 endef
 
 define Build/Prepare
-	$(RM) -r $(PKG_BUILD_DIR)
-	$(MKDIR) $(PKG_BUILD_DIR)
-	$(CP) ./files/. $(PKG_BUILD_DIR)/
+	rm -rf "$(PKG_BUILD_DIR)"
+	mkdir -p "$(PKG_BUILD_DIR)"
+	cp -a ./files/. "$(PKG_BUILD_DIR)/"
 endef
 
 define Build/Compile
@@ -35,7 +35,7 @@ endef
 
 define Package/libernet-mod/install
 	$(INSTALL_DIR) $(1)
-	$(CP) $(PKG_BUILD_DIR)/. $(1)/
+	cp -a "$(PKG_BUILD_DIR)/." "$(1)/"
 endef
 
 $(eval $(call BuildPackage,libernet-mod))
