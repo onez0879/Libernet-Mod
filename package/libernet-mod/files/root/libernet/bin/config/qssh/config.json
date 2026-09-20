@@ -9,11 +9,11 @@
         "start_port": 1080
     },
     "ssh": {
-        "host": "eh.xtun.biz.id",
-        "ip": "103.127.96.23",
+        "host": "isi host vpn",
+        "ip": "isi ip vpn",
         "port": 80,
-        "username": "deni",
-        "password": "belekok"
+        "username": "user",
+        "password": "password"
     },
     "network": {
         "type": "tcp"
@@ -26,12 +26,12 @@
     },
     "proxy": {
         "enable": true,
-        "host": "support.udemy.com",
+        "host": "bug.com",
         "port": 80
     },
     "payload": {
         "enable": true,
-        "request": "GET / HTTP/1.1[crlf]Host: audisi.ruangguru.com[crlf][crlf]PATCH / HTTP/1.1[crlf]Host: [host][crlf]Upgrade: websocket[crlf][crlf][split]HTTP/ 69[crlf][crlf]",
+        "request": "payload",
         "expect": [
             "200",
             "101"
