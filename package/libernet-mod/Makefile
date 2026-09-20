@@ -35,7 +35,9 @@ endef
 
 define Package/libernet-mod/install
 	$(INSTALL_DIR) $(1)
-	cp -a "$(PKG_BUILD_DIR)/." "$(1)/"
+	cp -a "$(PKG_BUILD_DIR)/root/." "$(1)/" 2>/dev/null || true
+	cp -a "$(PKG_BUILD_DIR)/usr/." "$(1)/usr/" 2>/dev/null || true
+	cp -a "$(PKG_BUILD_DIR)/www/." "$(1)/www/" 2>/dev/null || true
 endef
 
 $(eval $(call BuildPackage,libernet-mod))
