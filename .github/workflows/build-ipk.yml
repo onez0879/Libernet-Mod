@@ -53,9 +53,7 @@ jobs:
           SDK_DIR: openwrt-sdk-24.10.0-armsr-armv8_gcc-13.3.0_musl.Linux-x86_64
         run: |
           cd "$SDK_DIR"
-
           make defconfig
-
           make package/libernet-mod/compile V=s -j2
 
       - name: Find IPK
