@@ -1,0 +1,86 @@
+{
+    "log": {
+        "loglevel": "info"
+    },
+    "concurrency": {
+        "workers": 1,
+        "start_port": 1080
+    },
+    "policy": {
+        "levels": {
+            "0": {
+                "handshake": 4,
+                "connIdle": 300,
+                "uplinkOnly": 2,
+                "downlinkOnly": 5,
+                "statsUserUplink": false,
+                "statsUserDownlink": false,
+                "bufferSize": 10240
+            }
+        },
+        "system": {
+            "statsInboundUplink": false,
+            "statsInboundDownlink": false,
+            "statsOutboundUplink": false,
+            "statsOutboundDownlink": false
+        }
+    },
+    "inbounds": [
+        {
+            "listen": "127.0.0.1",
+            "port": 1080,
+            "protocol": "socks",
+            "settings": {
+                "auth": "noauth",
+                "udp": true,
+                "ip": "127.0.0.1",
+                "userLevel": 0
+            },
+            "tag": "socks"
+        }
+    ],
+    "outbounds": [
+        {
+            "sendThrough": "0.0.0.0",
+            "protocol": "trojan",
+            "settings": {
+                "servers": [
+                    {
+                        "address": "103.197.188.84",
+                        "port": 443,
+                        "password": "943a9b78-ba4a-4fcd-9325-5c93674dfd",
+                        "level": 0
+                    }
+                ]
+            },
+            "tag": "trojan",
+            "streamSettings": {
+                "network": "ws",
+                "security": "tls",
+                "tlsSettings": {
+                    "allowInsecure": true,
+                    "serverName": "investor.spotify.com"
+                },
+                "wsSettings": {
+                    "path": "/trojan-ws",
+                    "headers": {
+                        "Host": "investor.spotify.com"
+                    }
+                },
+                "httpSettings": {
+                    "host": [
+                        "investor.spotify.com"
+                    ],
+                    "path": "/trojan-ws"
+                }
+            }
+        }
+    ],
+    "etc": {
+        "ip": "103.197.188.84",
+        "udpgw": {
+            "ip": "127.0.0.1",
+            "port": 7200
+        }
+    }
+}

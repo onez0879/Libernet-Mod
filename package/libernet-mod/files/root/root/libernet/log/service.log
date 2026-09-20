@@ -1,0 +1,29 @@
+[14:45:32] Starting Libernet service
+[14:45:32] Waiting WAN...
+[14:45:32] WAN Ready (usb0 - 192.168.42.129)
+[14:45:32] Config: biz_tayo, Mode: V2Ray, Protocol: Trojan
+[14:45:32] Starting V2Ray service
+[14:45:32] Waiting SOCKS...
+[14:45:33] SOCKS Ready (127.0.0.1:1080)
+[14:45:33] Starting Q-LOAD (1 tunnels)
+[14:45:36] Q-LOAD listening on :7777
+[14:45:36] Starting Mihomo...
+[14:45:36] Waiting Mihomo...
+[14:45:39] Applying Route...
+[14:45:39] [ROUTING] Initializing routing engine...
+[14:45:39] [ROUTING] Mihomo TUN mode detected
+[14:45:39] [ROUTING] Skip NAT REDIRECT
+[14:45:39] Mihomo ready
+[14:45:39] <span style="color:blue">Libernet Connected in 7s</span>
+[14:45:45] Starting Memory Cleaner service
+[14:45:45] Starting PING loop service
+[14:45:51] <span style="color:red">[PING] bing.com Failed..!!</span>
+[14:46:19] Stopping Libernet service
+[14:46:19] Stopping V2Ray service
+[14:46:19] V2Ray service stopped
+[14:46:19] Stopping Q-LOAD
+[14:46:19] Stopping Memory Cleaner service
+[14:46:19] Stopping PING loop service
+[14:46:19] Stopping Auto Reconnect service
+[14:46:20] Removing Mihomo redirect rule
+[14:46:20] <span style="color: red">Libernet service stopped</span>
