@@ -3,6 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=libernet-mod
 PKG_VERSION:=2026.09.08
 PKG_RELEASE:=1
+
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKGARCH:=aarch64_generic
 
@@ -16,12 +17,11 @@ define Package/libernet-mod
   CATEGORY:=Network
   TITLE:=Libernet Mod web interface and tunnel scripts
   URL:=https://github.com/onez0879/Libernet-Mod
-  DEPENDS:=+bash +curl +ip-full +jq +luci-base +luci-compat +php8 +php8-cgi +php8-mod-json +php8-mod-session
 endef
 
 define Package/libernet-mod/description
-  Libernet Mod files packaged from a local OpenWrt backup. This package carries
-  ARM64 helper binaries and must be built for an ARM64 OpenWrt 24.10 target.
+  Libernet Mod web interface, scripts and ARM64 helper binaries.
+  Runtime dependencies are installed separately on the target device.
 endef
 
 define Build/Prepare
