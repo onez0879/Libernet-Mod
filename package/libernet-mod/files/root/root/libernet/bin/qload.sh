@@ -29,7 +29,7 @@ run() {
 
     killall q-load 2>/dev/null
 
-    nohup "${LIBERNET_DIR}/core/q-load" \
+    nohup "${LIBERNET_DIR}/core/qload" \
         -lport "${QLOAD_PORT}" \
         -tunnel ${TUNNELS} \
         >/tmp/qload.log 2>&1 &
