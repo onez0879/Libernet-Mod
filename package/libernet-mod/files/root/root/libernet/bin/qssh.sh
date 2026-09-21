@@ -84,7 +84,7 @@ run() {
     "${LIBERNET_DIR}/bin/log.sh" \
     -w "Starting Q-LOAD (${WORKERS} tunnels)"
 
-    nohup "${LIBERNET_DIR}/core/q-load" \
+    nohup "${LIBERNET_DIR}/core/qload" \
         -lport "${QLOAD_PORT}" \
         -tunnel ${TUNNELS} \
         >/tmp/qload.log 2>&1 &
