@@ -1,0 +1,381 @@
+body {
+background: #f5f7fa;
+background-image: url("../img/background.jpg");
+}
+ 
+/* Card */
+
+.card {
+border: 1px solid #dfe3e8;
+border-radius: 12px;
+box-shadow: 0 2px 8px rgba(0,0,0,.05);
+overflow: hidden;
+}
+
+.card-header {
+border-top-left-radius: 18px;
+border-top-right-radius: 18px;
+    display:block;
+    clear:both;
+}
+
+.card-body {
+background: #ffffff;
+}
+
+.libernet-label{
+    font-size:14px;
+    font-weight:600;
+    margin-bottom:4px;
+}
+
+.libernet-header{
+    text-align:center;
+    margin-bottom:8px;
+    margin-top:8px;
+}
+
+.libernet-logo{
+    height:48px;
+    width:auto;
+    max-width:100%;
+}
+
+.libernet-menu{
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    margin-top:8px;
+    margin-bottom:-8px;
+}
+
+.libernet-menu a{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+
+    text-decoration:none;
+    color:#6c757d;
+
+    padding:6px 8px;
+    border-radius:12px;
+
+    transition:.2s;
+}
+
+.libernet-menu a i{
+    font-size:24px;
+    margin-bottom:2px;
+}
+
+.libernet-menu a span{
+    font-size:13px;
+    line-height:1.1;
+}
+
+.libernet-menu a.active{
+    color:#5f7fba;
+    background:#eef4ff;
+}
+
+.libernet-menu a:hover{
+    background:#f3f4f6;
+}
+
+@media(max-width:768px){
+
+    .libernet-main{
+        font-size:36px;
+    }
+
+    .libernet-version{
+        font-size:34px;
+    }
+
+    .libernet-modify{
+        font-size:40px;
+    }
+
+    .libernet-menu a i{
+        font-size:24px;
+    }
+
+    .libernet-menu a span{
+        font-size:13px;
+    }
+
+}
+
+/* Form */
+
+.form-control {
+border-radius: 8px;
+border: 1px solid #d1d5db;
+}
+
+.form-control:focus {
+border-radius:12px;
+border-color: #5473a7;
+box-shadow: 0 0 0 .15rem rgba(84,115,167,.15);
+}
+
+/* Button */
+
+.btn {
+border-radius: 8px;
+}
+
+.btn-primary {
+background: #5473a7;
+border-color: #5473a7;
+}
+
+.btn-primary:hover {
+background: #476391;
+border-color: #476391;
+}
+
+.btn-danger {
+border-radius: 8px;
+}
+
+/* Checkbox */
+
+.form-check-input:checked {
+background-color: #5473a7;
+border-color: #5473a7;
+}
+
+/* Status */
+
+.text-success {
+color: #22c55e !important;
+font-weight: 600;
+}
+
+.text-warning {
+color: #f59e0b !important;
+font-weight: 600;
+}
+
+.text-info {
+color: #3b82f6 !important;
+font-weight: 600;
+}
+
+/* Speedtest */
+
+.speed-panel{
+    padding:20px;
+}
+
+.result-card{
+    background:#fff;
+    border:1px solid #e5e5e5;
+    border-radius:8px;
+    padding:28px;
+    box-shadow:0 2px 10px rgba(0,0,0,.05);
+        margin-left:-18px;
+        margin-right:-18px;
+
+    
+}
+
+.metric{
+    position:relative;
+    min-width: 0;
+}
+
+.metric:not(:last-child){
+    border-right:1px solid #ececec;
+}
+
+.metric-icon{
+    font-size:32px;
+    margin-bottom:10px;
+}
+
+.ping{
+    color:#8b5cf6;
+}
+
+.download{
+    color:#22c55e;
+}
+
+.upload{
+    color:#f59e0b;
+}
+
+.metric-title{
+    text-align:center;
+    font-size:14px;
+    font-weight:500;
+    min-height:20px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    white-space:nowrap;
+    
+    
+}
+
+.metric-value{
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+@media (max-width: 768px){
+
+    .metric-value{
+        font-size: 24px;
+    }
+
+}
+
+.metric-unit{
+    color:#888;
+}
+
+.server-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.server-row i{
+    font-size:18px;
+    color:#2563eb;
+}
+.server-name{
+    font-size:15px;
+    font-weight:600;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.server-title{
+    font-size:13px;
+    color:#777;
+}
+
+.info-box{
+    margin-top:15px;
+    background:#eef5ff;
+    border-radius:12px;
+    padding:12px 15px;
+    color:#555;
+}
+
+.speed-loader{
+    position:relative;
+    width:220px;
+    height:220px;
+    margin:0 auto 20px;
+}
+
+.loader-ring{
+    width:220px;
+    height:220px;
+    border-radius:50%;
+    border:8px solid #dbeafe;
+    border-top:8px solid #2563eb;
+    animation:spin 1s linear infinite;
+}
+
+.loader-content{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+}
+
+.loader-content i{
+    font-size:48px;
+    color:#2563eb;
+    margin-bottom:10px;
+}
+
+.loader-content h2{
+    font-weight:700;
+    margin:0;
+}
+
+.loader-content p{
+    color:#777;
+    margin-top:5px;
+}
+
+@keyframes spin{
+    from{
+        transform:rotate(0deg);
+    }
+    to{
+        transform:rotate(360deg);
+    }
+}
+/* Log Window */
+
+pre.form-control {
+background: #f8fafc !important;
+border: 1px solid #e5e7eb !important;
+border-radius: 10px;
+color: #374151;
+font-size: 13px;
+line-height: 1.5;
+}
+
+.mihomo-log {
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+    padding: 6px !important;
+}
+/* Home Title */
+
+h3 {
+font-weight: 600;
+color: #374151;
+}
+
+/* Status Box */
+
+.status-box {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.04);
+}
+
+.status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.status-row:not(:last-child) {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.status-label {
+    font-weight: 600;
+    color: #6b7280;
+}
+
+@media (max-width: 768px) {
+
+    .libernet-menu {
+        justify-content: space-evenly;
+        gap: 6px;
+    }
+
+    .libernet-menu a {
+        padding: 8px 10px;
+        font-size: 14px;
+    }
+
+}
