@@ -170,6 +170,7 @@ const app = new Vue({
                     ]
                 },
                 
+                importPayload: "",
                 system: {}
             }
         }
@@ -185,7 +186,7 @@ const app = new Vue({
     },
     methods: {
         decodePath: _.debounce(function () {
-            this.config.temp.modes[2].profile.stream.path = decodeURIComponent(JSON.parse('"' + this.config.temp.modes[1].profile.stream.path + '"'))
+            this.config.temp.modes[1].profile.stream.path = decodeURIComponent(JSON.parse('"' + this.config.temp.modes[1].profile.stream.path + '"'))
         }, 500),
         getProfiles(mode) {
             let action
@@ -404,34 +405,48 @@ const app = new Vue({
                 this.getProfiles(this.config.mode)
             })
         },
-        importV2rayConfig() {
-            const protocol = this.config.temp.modes[1].profile.protocol
-            const importUrl = this.config.temp.modes[1].import_url
-            const config = JSON.parse(atob(importUrl.split("://")[1]))
-            const profile = this.config.temp.modes[1].profile
-            switch (protocol) {
-                case "vmess":
-                    const host = config.ps
-                    const port = config.port
-                    const network = config.net
-                    const security = config.tls
-                    const alterId = config.aid
-                    const vmess_id = config.id
-                    const vmess_security = config.type
-                    const sni = config.host
-                    const path = config.path
-                    profile.server.host = host
-                    profile.server.port = parseInt(port)
-                    profile.network = network
-                    profile.security = security
-                    profile.server.user.level = parseInt(alterId)
-                    profile.server.user.vmess.id = vmess_id
-                    profile.server.user.vmess.security = vmess_security
-                    profile.stream.sni = sni
-                    profile.stream.path = path
-                    break
+        applyImport(text) {
+            const result = importV2rayConfigFromText(text)
+            if (!result) {
+                Swal.fire({
+                    icon: "error",
+                    title: "Import failed",
+                    text: "Unrecognized URI or JSON"
+                })
+                return
             }
-            this.resolveServerHost()
+            const p = this.config.temp.modes[1].profile
+            p.protocol = result.protocol
+            p.network = result.profile.network
+            p.security = result.profile.network === "tcp" ? "tls"
+                       : result.profile.network === "http" ? "none"
+                       : result.profile.security
+            p.server.host = result.profile.server.host
+            p.server.port = result.profile.server.port
+            p.server.user.level = result.profile.server.user.level
+            p.server.user.vmess.id = result.profile.server.user.vmess.id
+            p.server.user.vmess.security = result.profile.server.user.vmess.security
+            p.server.user.vless.id = result.profile.server.user.vless.id
+            p.server.user.trojan.password = result.profile.server.user.trojan.password
+            p.stream.sni = result.profile.stream.sni
+            p.stream.path = result.profile.stream.path
+            if (!this.config.temp.profile) {
+                this.config.temp.profile = result.profile.server.host
+            }
+            if (result.needsHostResolve) this.resolveServerHost()
+            Swal.fire({
+                position: "center",
+                icon: "success",
+                title: "Config imported",
+                showConfirmButton: false,
+                timer: 1200
+            })
+        },
+        importConfigFromText() {
+            this.applyImport(this.importPayload)
+        },
+        importV2rayConfig() {
+            this.applyImport(this.config.temp.modes[1].import_url)
         },
         resolveServerHost: _.debounce(function () {
             switch (this.config.temp.mode) {
