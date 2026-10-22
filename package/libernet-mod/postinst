@@ -1,0 +1,15 @@
+#!/bin/sh
+# postinst libernet-mod: setup runtime setelah opkg install
+LIBDIR="/root/libernet"
+CFG="$LIBDIR/system/config.json"
+CFGDEF="$LIBDIR/system/config.default.json"
+[ -d "$LIBDIR/bin" ] && chmod +x "$LIBDIR/bin/"*.sh 2>/dev/null
+[ ! -f "$CFG" ] && [ -f "$CFGDEF" ] && { cp "$CFGDEF" "$CFG"; chmod 600 "$CFG"; }
+if command -v uci >/dev/null 2>&1; then
+    uci -q show uhttpd.main 2>/dev/null | grep -q 'interpreter.*\.php=' || {
+        uci -q add_list uhttpd.main.interpreter='.php=/usr/bin/php-cgi'
+        uci commit uhttpd
+    }
+    /etc/init.d/uhttpd reload 2>/dev/null || /etc/init.d/uhttpd restart 2>/dev/null
+fi
+exit 0
