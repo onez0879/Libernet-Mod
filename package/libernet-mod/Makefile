@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libernet-mod
-PKG_VERSION:=2026.10.22.2
+PKG_VERSION:=2026.10.22.3
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
@@ -75,8 +75,6 @@ fi
 exit 0
 endef
 
-# Copy custom postinst-pkg to postinst so control.tar.gz ships the real script.
-libernet-mod_COMMANDS += cp postinst-pkg postinst
 
 define Build/Prepare
 	rm -rf "$(PKG_BUILD_DIR)"
