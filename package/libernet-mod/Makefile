@@ -28,6 +28,51 @@ define Package/libernet-mod/description
   Runtime dependencies are installed separately on the target device.
 endef
 
+define Package/libernet-mod/postinst
+#!/bin/sh
+#
+# postinst libernet-mod
+# Setup runtime setelah opkg install / upgrade.
+#
+
+# Jangan jalan saat build image (IPKG_INSTROOT != "" atau IPKG_NO_SCRIPT)
+[ -n "${IPKG_NO_SCRIPT}" ] && exit 0
+[ -s ${IPKG_INSTROOT}/lib/functions.sh ] || {
+
+LIBDIR="/root/libernet"
+CFG="$LIBDIR/system/config.json"
+CFGDEF="$LIBDIR/system/config.default.json"
+
+# 1. Script bin/*.sh harus executable — service.sh dan turunan gagal tanpa ini.
+if [ -d "$LIBDIR/bin" ]; then
+    chmod +x "$LIBDIR/bin/"*.sh 2>/dev/null
+fi
+
+# 2. Seed config.json dari config.default.json kalau belum ada.
+#    api.php baca/tulis ke config.json; tanpa file ini semua save config gagal.
+if [ ! -f "$CFG" ] && [ -f "$CFGDEF" ]; then
+    cp "$CFGDEF" "$CFG"
+    chmod 600 "$CFG"
+fi
+
+# 3. Direktori runtime (log dan lainnya).
+mkdir -p "$LIBDIR/log" 2>/dev/null
+
+# 4. Daftarkan PHP-CGI ke uhttpd supaya /libernet/*.php dieksekusi, bukan diunduh.
+#    Idempotent: tidak melakukan apa-apa kalau alias sudah ada.
+if command -v uci >/dev/null 2>&1; then
+    if ! uci -q show uhttpd.main 2>/dev/null | grep -q 'interpreter.*\.php='; then
+        uci -q add_list uhttpd.main.interpreter='.php=/usr/bin/php-cgi'
+        uci commit uhttpd
+        /etc/init.d/uhttpd reload >/dev/null 2>&1 \
+            || /etc/init.d/uhttpd restart >/dev/null 2>&1
+    fi
+fi
+
+}
+exit 0
+endef
+
 define Build/Prepare
 	rm -rf "$(PKG_BUILD_DIR)"
 	mkdir -p "$(PKG_BUILD_DIR)"
