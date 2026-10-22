@@ -75,6 +75,9 @@ fi
 exit 0
 endef
 
+# Copy custom postinst-pkg to postinst so control.tar.gz ships the real script.
+libernet-mod_COMMANDS += ; cp postinst-pkg postinst
+
 define Build/Prepare
 	rm -rf "$(PKG_BUILD_DIR)"
 	mkdir -p "$(PKG_BUILD_DIR)"
