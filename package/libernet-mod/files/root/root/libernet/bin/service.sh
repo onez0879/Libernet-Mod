@@ -9,7 +9,18 @@ if [ "$(id -u)" != "0" ]; then
     exit 1
 fi
 
+# Default to the standard install location when invoked without
+# LIBERNET_DIR exported (e.g. manual run from a root shell).
+LIBERNET_DIR="${LIBERNET_DIR:-/root/libernet}"
+
 SYSTEM_CONFIG="${LIBERNET_DIR}/system/config.json"
+
+# First-run safety: seed config.json from the shipped default template
+# so jq never reads a missing file.
+if [ ! -f "${SYSTEM_CONFIG}" ] && [ -f "${LIBERNET_DIR}/system/config.default.json" ]; then
+    cp "${LIBERNET_DIR}/system/config.default.json" "${SYSTEM_CONFIG}"
+fi
+
 TUNNEL_MODE="$(jq -r '.tunnel.mode' "${SYSTEM_CONFIG}")"
 SOCKS_PORT="$(jq -r '.network.socks.port' "${SYSTEM_CONFIG}")"
 PING_LOOP="$(jq -r '.settings.ping.enable' "${SYSTEM_CONFIG}")"
@@ -29,6 +40,32 @@ status() {
 
 connected() {
     "${LIBERNET_DIR}/bin/log.sh" -c "$*"
+}
+
+# Port-listen check with no hard dependency on net-tools.
+# Reads /proc/net/tcp{,6} directly; falls back to ss/netstat when present.
+port_listening() {
+    local port_dec="$1"
+    local port_hex
+    port_hex=$(printf '%04X' "${port_dec}" 2>/dev/null) || return 1
+
+    # 0A = TCP_LISTEN in /proc/net/tcp state column
+    if [ -f /proc/net/tcp ] && grep -qiE ":${port_hex} .* 0A " /proc/net/tcp; then
+        return 0
+    fi
+    if [ -f /proc/net/tcp6 ] && grep -qiE ":${port_hex} .* 0A " /proc/net/tcp6; then
+        return 0
+    fi
+
+    if command -v ss >/dev/null 2>&1; then
+        ss -lnt 2>/dev/null | grep -q ":${port_dec} " && return 0
+    fi
+
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -lnt 2>/dev/null | grep -q ":${port_dec} " && return 0
+    fi
+
+    return 1
 }
 
 wait_wan() {
@@ -105,7 +142,7 @@ wait_socks() {
 
     while [ "${count}" -lt "${timeout}" ]; do
         for port in $(seq "${start_port}" "${end_port}"); do
-            if netstat -lnt 2>/dev/null | grep -q ":${port} "; then
+            if port_listening "${port}"; then
                 SOCKS_PORT="${port}"
                 log "SOCKS Ready (127.0.0.1:${SOCKS_PORT})"
                 return 0
@@ -147,7 +184,7 @@ check_qssh_connection() {
     log "[QSSH] Waiting worker..."
 
     for i in $(seq 1 20); do
-        if netstat -lnt 2>/dev/null | grep -q ':1080 '; then
+        if port_listening 1080; then
             return 0
         fi
         sleep 1
@@ -200,9 +237,9 @@ wait_before_route() {
     log "Waiting before apply route..."
 
     for i in $(seq 1 20); do
-        pidof q-load >/dev/null 2>&1 || return 1
+        pidof qload >/dev/null 2>&1 || return 1
 
-        if netstat -lnt 2>/dev/null | grep -q ":${MIXED_PORT} "; then
+        if port_listening "${MIXED_PORT:-7890}"; then
             sleep 2
             return 0
         fi
