@@ -1,15 +1,18 @@
 <?php
     session_start();
 
-    function set_session($usename, $password) {
-        $_SESSION['username'] = $usename;
+    function set_session($username, $password) {
+        $_SESSION['username'] = $username;
         $_SESSION['password'] = $password;
         header("Location: index.php");
+        exit;
     }
 
     function check_session() {
-        if ((!isset($_SESSION['username'])) && (!isset($_SESSION['password']))) {
+        // Redirect if either key is missing — using OR is correct here.
+        if (!isset($_SESSION['username']) || !isset($_SESSION['password'])) {
             header("Location: login.php");
+            exit;
         }
     }
 
@@ -19,5 +22,6 @@
         session_unset();
         session_destroy();
         header("Location: login.php");
+        exit;
     }
 ?>
