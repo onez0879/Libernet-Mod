@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libernet-mod
-PKG_VERSION:=2026.10.22
+PKG_VERSION:=2026.10.22.2
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
@@ -28,6 +28,9 @@ define Package/libernet-mod/description
   Runtime dependencies are installed separately on the target device.
 endef
 
+# postinst inline: gunakan $$ untuk escape variable shell dari make expansion.
+# Tanpa escape, ${IPKG_NO_SCRIPT} / ${IPKG_INSTROOT} diurai make → kosong,
+# dan guard skip tidak jalan saat image build atau instalasi opkg.
 define Package/libernet-mod/postinst
 #!/bin/sh
 #
@@ -35,33 +38,33 @@ define Package/libernet-mod/postinst
 # Setup runtime setelah opkg install / upgrade.
 #
 
-# Jangan jalan saat build image (IPKG_INSTROOT != "" atau IPKG_NO_SCRIPT)
-[ -n "${IPKG_NO_SCRIPT}" ] && exit 0
-[ -s ${IPKG_INSTROOT}/lib/functions.sh ] || {
+# Lewati saat image build / opkg tidak mengeksekusi script.
+[ -n "$${IPKG_NO_SCRIPT}" ] && exit 0
+[ -n "$${IPKG_INSTROOT}" ] && exit 0
 
 LIBDIR="/root/libernet"
-CFG="$LIBDIR/system/config.json"
-CFGDEF="$LIBDIR/system/config.default.json"
+CFG="$${LIBDIR}/system/config.json"
+CFGDEF="$${LIBDIR}/system/config.default.json"
 
 # 1. Script bin/*.sh harus executable — service.sh dan turunan gagal tanpa ini.
-if [ -d "$LIBDIR/bin" ]; then
-    chmod +x "$LIBDIR/bin/"*.sh 2>/dev/null
+if [ -d "$${LIBDIR}/bin" ]; then
+    chmod +x "$${LIBDIR}/bin/"*.sh 2>/dev/null
 fi
 
 # 2. Seed config.json dari config.default.json kalau belum ada.
 #    api.php baca/tulis ke config.json; tanpa file ini semua save config gagal.
-if [ ! -f "$CFG" ] && [ -f "$CFGDEF" ]; then
-    cp "$CFGDEF" "$CFG"
-    chmod 600 "$CFG"
+if [ ! -f "$${CFG}" ] && [ -f "$${CFGDEF}" ]; then
+    cp "$${CFGDEF}" "$${CFG}"
+    chmod 600 "$${CFG}"
 fi
 
 # 3. Direktori runtime (log dan lainnya).
-mkdir -p "$LIBDIR/log" 2>/dev/null
+mkdir -p "$${LIBDIR}/log" 2>/dev/null
 
 # 4. Daftarkan PHP-CGI ke uhttpd supaya /libernet/*.php dieksekusi, bukan diunduh.
 #    Idempotent: tidak melakukan apa-apa kalau alias sudah ada.
 if command -v uci >/dev/null 2>&1; then
-    if ! uci -q show uhttpd.main 2>/dev/null | grep -q 'interpreter.*\.php='; then
+    if ! uci -q show uhttpd.main 2>/dev/null | grep -q 'interpreter.*\\.php='; then
         uci -q add_list uhttpd.main.interpreter='.php=/usr/bin/php-cgi'
         uci commit uhttpd
         /etc/init.d/uhttpd reload >/dev/null 2>&1 \
@@ -69,7 +72,6 @@ if command -v uci >/dev/null 2>&1; then
     fi
 fi
 
-}
 exit 0
 endef
 
