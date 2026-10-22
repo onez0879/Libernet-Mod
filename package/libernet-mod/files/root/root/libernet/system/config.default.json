@@ -34,7 +34,8 @@
     },
     "system": {
         "username": "admin",
-        "password": "libernet"
+        "password": "libernet",
+        "auth": false
     },
     "settings": {
         "ping": {

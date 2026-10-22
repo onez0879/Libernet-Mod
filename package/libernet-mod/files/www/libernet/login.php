@@ -2,8 +2,14 @@
     include('config.inc.php');
     include('auth.php');
     $loginError = false;
+    // Login disabled => nothing to log into.
+    if (!auth_enabled()) {
+        header("Location: index.php");
+        exit;
+    }
     if ((isset($_SESSION['username'])) && (isset($_SESSION['password']))) {
         header("Location: index.php");
+        exit;
     }
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $username = $_POST['username'];
