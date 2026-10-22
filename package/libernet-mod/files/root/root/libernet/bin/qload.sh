@@ -3,7 +3,7 @@
 
 SERVICE_NAME="Q-LOAD"
 
-LIBERNET_DIR="/root/libernet"
+LIBERNET_DIR="${LIBERNET_DIR:-/root/libernet}"
 
 SYSTEM_CONFIG="${LIBERNET_DIR}/system/config.json"
 
@@ -29,16 +29,51 @@ case "$TUNNEL_MODE" in
 
     *)
 
-        echo "Unknown tunnel mode: $TUNNEL_MODE"
-        exit 1
+        # Mode belum dikenali: fallback ke profil SSH, bukan exit buta
+        SSH_PROFILE="$(jq -r '.tunnel.profile.ssh // empty' "$SYSTEM_CONFIG")"
+        PROFILE_CONFIG="${LIBERNET_DIR}/bin/config/ssh/${SSH_PROFILE}.json"
+        "${LIBERNET_DIR}/bin/log.sh" \
+            -w "Q-LOAD: mode ${TUNNEL_MODE} belum dikenali, fallback ke profil SSH (${SSH_PROFILE})"
+        if [ ! -f "$PROFILE_CONFIG" ]; then
+            echo "Unknown tunnel mode: $TUNNEL_MODE (no fallback profile)" 1>&2
+            exit 1
+        fi
         ;;
 
 esac
 
 QLOAD_PORT="$(jq -r '.network.qload.port' "$SYSTEM_CONFIG")"
 
-WORKERS="$(jq -r '.concurrency.workers' "$PROFILE_CONFIG")"
-START_PORT="$(jq -r '.concurrency.start_port' "$PROFILE_CONFIG")"
+WORKERS="$(jq -r '.concurrency.workers // 1' "$PROFILE_CONFIG")"
+START_PORT="$(jq -r '.concurrency.start_port // 1080' "$PROFILE_CONFIG")"
+
+# guard: jq null/empty -> default aman
+{ [ -z "$WORKERS" ] || [ "$WORKERS" = "null" ]; } && WORKERS=1
+{ [ -z "$START_PORT" ] || [ "$START_PORT" = "null" ]; } && START_PORT=1080
+{ [ -z "$QLOAD_PORT" ] || [ "$QLOAD_PORT" = "null" ]; } && QLOAD_PORT=7777
+
+# port checker tanpa netstat (OpenWrt 24.10: net-tools deprecated)
+port_listening() {
+    local port_dec="$1"
+    local port_hex
+    port_hex=$(printf '%04X' "${port_dec}" 2>/dev/null) || return 1
+
+    if [ -f /proc/net/tcp ] && grep -qiE ":${port_hex} .* 0A " /proc/net/tcp; then
+        return 0
+    fi
+    if [ -f /proc/net/tcp6 ] && grep -qiE ":${port_hex} .* 0A " /proc/net/tcp6; then
+        return 0
+    fi
+
+    if command -v ss >/dev/null 2>&1; then
+        ss -lnt 2>/dev/null | grep -q ":${port_dec} " && return 0
+    fi
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -lnt 2>/dev/null | grep -q ":${port_dec} " && return 0
+    fi
+
+    return 1
+}
 
 run() {
 
@@ -93,7 +128,7 @@ stop() {
 
 status() {
 
-    if netstat -lnt 2>/dev/null | grep -q ":${QLOAD_PORT} "; then
+    if port_listening "${QLOAD_PORT}"; then
         echo "RUNNING"
     else
         echo "STOPPED"

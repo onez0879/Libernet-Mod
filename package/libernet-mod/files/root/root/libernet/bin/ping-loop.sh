@@ -11,9 +11,34 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 SERVICE_NAME="PING loop"
-SETTING="/root/libernet/system/config.json"
-FAIL_COUNT=$(jq -r '.settings.ping.fail_count' "$SETTING")
-LOG_INTERVAL=$(jq -r '.settings.ping.log_interval' "$SETTING")
+LIBERNET_DIR="${LIBERNET_DIR:-/root/libernet}"
+SETTING="${LIBERNET_DIR}/system/config.json"
+FAIL_COUNT=$(jq -r '.settings.ping.fail_count // 3' "$SETTING")
+LOG_INTERVAL=$(jq -r '.settings.ping.log_interval // 5' "$SETTING")
+
+# cek konektivitas: httping -> curl -> ping (mana yang tersedia)
+check_host() {
+    if command -v httping >/dev/null 2>&1; then
+        OUT=$(httping -c 1 -t "$TIMEOUT" "$HOST" 2>&1) || return 1
+        LATENCY=$(echo "$OUT" | grep "round-trip" | awk -F'=' '{print $2}' | awk -F'/' '{print $2}' | tr -d ' ')
+        [ -n "$LATENCY" ] || LATENCY="?"
+        return 0
+    fi
+
+    URL="$HOST"
+    case "$HOST" in http*|https*) ;; *) URL="http://${HOST}";; esac
+
+    if command -v curl >/dev/null 2>&1; then
+        T=$(curl -s -o /dev/null -w "%{time_total}" --max-time "$TIMEOUT" "$URL" 2>/dev/null) || return 1
+        LATENCY=$(awk "BEGIN{printf \"%.1f\", ${T:-0}*1000}")
+        return 0
+    fi
+
+    OUT=$(ping -c 1 -W "$TIMEOUT" "$HOST" 2>&1) || return 1
+    LATENCY=$(echo "$OUT" | grep -o 'time=[0-9.]*' | head -1 | cut -d= -f2)
+    [ -n "$LATENCY" ] || LATENCY="?"
+    return 0
+}
 
 loop() {
 
@@ -53,16 +78,7 @@ while true; do
 
         fi
 
-        PING_RESULT=$(httping -c 1 -t "$TIMEOUT" "$HOST" 2>&1)
-        RET=$?
-
-        if [ "$RET" = "0" ]; then
-
-            LATENCY=$(echo "$PING_RESULT" \
-            | grep "round-trip" \
-            | awk -F'=' '{print $2}' \
-            | awk -F'/' '{print $2}' \
-            | tr -d ' ')
+        if check_host; then
 
             COUNTER=$((COUNTER + 1))
 

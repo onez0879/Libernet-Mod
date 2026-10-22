@@ -315,7 +315,7 @@ wait_qload() {
     log "Starting Q-LOAD..."
 
     for i in $(seq 1 30); do
-        if netstat -lnt 2>/dev/null | grep -q ':7777 '; then
+        if port_listening 7777; then
             log "Q-LOAD Ready (127.0.0.1:7777)"
             return 0
         fi

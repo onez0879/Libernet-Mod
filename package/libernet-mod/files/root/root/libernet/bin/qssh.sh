@@ -5,16 +5,17 @@ if [ "$(id -u)" != "0" ]; then
     exit 1
 fi
 
+LIBERNET_DIR="${LIBERNET_DIR:-/root/libernet}"
+
 SERVICE_NAME="QSSH"
-LIBERNET_DIR="/root/libernet"
 SYSTEM_CONFIG="${LIBERNET_DIR}/system/config.json"
 
-QSSH_PROFILE="$(jq -r '.tunnel.profile.qssh' "$SYSTEM_CONFIG")"
+QSSH_PROFILE="$(jq -r '.tunnel.profile.qssh // empty' "$SYSTEM_CONFIG")"
 QSSH_CONFIG="${LIBERNET_DIR}/bin/config/qssh/${QSSH_PROFILE}.json"
 
-SOCKS_PORT="$(jq -r '.concurrency.start_port' "$QSSH_CONFIG")"
-WORKERS="$(jq -r '.concurrency.workers' "$QSSH_CONFIG")"
-QLOAD_PORT="$(jq -r '.network.qload.port' "$SYSTEM_CONFIG")"
+SOCKS_PORT="$(jq -r '.concurrency.start_port // 1080' "$QSSH_CONFIG")"
+WORKERS="$(jq -r '.concurrency.workers // 1' "$QSSH_CONFIG")"
+QLOAD_PORT="$(jq -r '.network.qload.port // 7777' "$SYSTEM_CONFIG")"
 
 wait_socks() {
     local timeout=30
@@ -27,7 +28,7 @@ wait_socks() {
 
     while [ "${count}" -lt "${timeout}" ]; do
         for port in $(seq "${start_port}" "${end_port}"); do
-            if netstat -lnt 2>/dev/null | grep -q ":${port} "; then
+            if port_listening "${port}"; then
                 SOCKS_PORT="${port}"
                 log "SOCKS Ready (127.0.0.1:${SOCKS_PORT})"
                 return 0
@@ -39,6 +40,28 @@ wait_socks() {
     done
 
     log '<span style="color:red">SOCKS timeout</span>'
+    return 1
+}
+
+port_listening() {
+    local port_dec="$1"
+    local port_hex
+    port_hex=$(printf '%04X' "${port_dec}" 2>/dev/null) || return 1
+
+    if [ -f /proc/net/tcp ] && grep -qiE ":${port_hex} .* 0A " /proc/net/tcp; then
+        return 0
+    fi
+    if [ -f /proc/net/tcp6 ] && grep -qiE ":${port_hex} .* 0A " /proc/net/tcp6; then
+        return 0
+    fi
+
+    if command -v ss >/dev/null 2>&1; then
+        ss -lnt 2>/dev/null | grep -q ":${port_dec} " && return 0
+    fi
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -lnt 2>/dev/null | grep -q ":${port_dec} " && return 0
+    fi
+
     return 1
 }
 
@@ -133,13 +156,13 @@ status() {
 
         PORT=$((SOCKS_PORT+i))
 
-        if netstat -lnt 2>/dev/null | grep -q ":${PORT} "; then
+        if port_listening "${PORT}"; then
             READY=$((READY+1))
         fi
 
     done
 
-    if ! netstat -lnt 2>/dev/null | grep -q ":${QLOAD_PORT} "; then
+    if ! port_listening "${QLOAD_PORT}"; then
         echo "STOPPED"
         return 1
     fi

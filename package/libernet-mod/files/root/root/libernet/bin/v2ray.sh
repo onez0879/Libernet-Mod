@@ -9,11 +9,13 @@ if [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
+LIBERNET_DIR="${LIBERNET_DIR:-/root/libernet}"
+
 SERVICE_NAME="V2Ray"
 SYSTEM_CONFIG="${LIBERNET_DIR}/system/config.json"
-V2RAY_PROFILE="$(grep 'v2ray":' ${SYSTEM_CONFIG} | awk '{print $2}' | sed 's/,//g; s/"//g')"
+V2RAY_PROFILE="$(jq -r '.tunnel.profile.v2ray // empty' "${SYSTEM_CONFIG}")"
 V2RAY_CONFIG="${LIBERNET_DIR}/bin/config/v2ray/${V2RAY_PROFILE}.json"
-V2RAY_PROTOCOL="$(grep 'protocol":' ${V2RAY_CONFIG} | awk '{print $2}' | sed 's/,//g; s/"//g' | tail -n1)"
+V2RAY_PROTOCOL="$(jq -r '.protocol // empty' "${V2RAY_CONFIG}" 2>/dev/null)"
 
 function run() {
   case "${V2RAY_PROTOCOL}" in
@@ -41,7 +43,7 @@ function run() {
 [ -z "$WAN_IP" ] && WAN_IP="0.0.0.0"
 
 sed -i -E 's/"sendThrough":[[:space:]]*"[^"]*"/"sendThrough": "'"$WAN_IP"'"/' "${V2RAY_CONFIG}"
-  screen -AmdS v2ray-client bash -c "while true; do v2ray run -config \"${V2RAY_CONFIG}\" >> /tmp/v2ray.log 2>&1 sleep 3; done" \
+  screen -AmdS v2ray-client bash -c "while true; do v2ray run -config \"${V2RAY_CONFIG}\" >> /tmp/v2ray.log 2>&1; sleep 3; done" \
     && echo -e "${SERVICE_NAME} service started!"
 }
 

@@ -10,9 +10,33 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 SERVICE_NAME="Auto Reconnect"
+LIBERNET_DIR="${LIBERNET_DIR:-/root/libernet}"
 SYSTEM_CONFIG="${LIBERNET_DIR}/system/config.json"
 TUNNEL_MODE="$(grep 'mode":' ${SYSTEM_CONFIG} | awk '{print $2}' | sed 's/,//g; s/"//g')"
-QLOAD_PORT="$(jq -r '.tun2socks.socks.port' "$SYSTEM_CONFIG")"
+QLOAD_PORT="$(jq -r '.network.qload.port // .tun2socks.socks.port // 7777' "$SYSTEM_CONFIG")"
+
+# port checker tanpa netstat (OpenWrt 24.10: net-tools deprecated)
+port_listening() {
+    local port_dec="$1"
+    local port_hex
+    port_hex=$(printf '%04X' "${port_dec}" 2>/dev/null) || return 1
+
+    if [ -f /proc/net/tcp ] && grep -qiE ":${port_hex} .* 0A " /proc/net/tcp; then
+        return 0
+    fi
+    if [ -f /proc/net/tcp6 ] && grep -qiE ":${port_hex} .* 0A " /proc/net/tcp6; then
+        return 0
+    fi
+
+    if command -v ss >/dev/null 2>&1; then
+        ss -lnt 2>/dev/null | grep -q ":${port_dec} " && return 0
+    fi
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -lnt 2>/dev/null | grep -q ":${port_dec} " && return 0
+    fi
+
+    return 1
+}
 
 check_socks() {
 
@@ -42,7 +66,7 @@ function loop() {
         fi
 
         # SOCKS tidak listen
-        if ! netstat -lnt 2>/dev/null | grep -q ":${QLOAD_PORT} "; then
+        if ! port_listening "${QLOAD_PORT}"; then
 
             FAIL_COUNT=$((FAIL_COUNT+1))
 
@@ -131,7 +155,7 @@ fi
 
             sleep 20
 
-            if netstat -lnt 2>/dev/null | grep -q ":1080 "; then
+            if port_listening 1080; then
 
                 "${LIBERNET_DIR}/bin/log.sh" \
                 -w "<span style=\"color:green\">[AUTO-RC] Config OK</span>"

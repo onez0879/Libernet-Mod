@@ -14,11 +14,33 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 SERVICE_NAME="SSH Worker"
-LIBERNET_DIR="/root/libernet"
+LIBERNET_DIR="${LIBERNET_DIR:-/root/libernet}"
 SYSTEM_CONFIG="${LIBERNET_DIR}/system/config.json"
 
 log() {
     "${LIBERNET_DIR}/bin/log.sh" -w "$*"
+}
+
+port_listening() {
+    local port_dec="$1"
+    local port_hex
+    port_hex=$(printf '%04X' "${port_dec}" 2>/dev/null) || return 1
+
+    if [ -f /proc/net/tcp ] && grep -qiE ":${port_hex} .* 0A " /proc/net/tcp; then
+        return 0
+    fi
+    if [ -f /proc/net/tcp6 ] && grep -qiE ":${port_hex} .* 0A " /proc/net/tcp6; then
+        return 0
+    fi
+
+    if command -v ss >/dev/null 2>&1; then
+        ss -lnt 2>/dev/null | grep -q ":${port_dec} " && return 0
+    fi
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -lnt 2>/dev/null | grep -q ":${port_dec} " && return 0
+    fi
+
+    return 1
 }
 
 # ------------------------------
@@ -192,7 +214,7 @@ status() {
 
     while [ "$i" -lt "$WORKERS" ]; do
         PORT=$((START_PORT + i))
-        if netstat -lnt 2>/dev/null | grep -q ":${PORT} "; then
+        if port_listening "${PORT}"; then
             READY=$((READY + 1))
         fi
         i=$((i + 1))
