@@ -1,0 +1,21 @@
+#!/bin/sh
+# prerm for libernet-mod — runs on the OpenWrt target before removal.
+
+set -u
+
+UHTTPD_INTERPRETER=".php=/usr/bin/php-cgi"
+
+# Remove the PHP-CGI interpreter we registered in postinst
+if command -v uci >/dev/null 2>&1; then
+    if uci get uhttpd.main.interpreter 2>/dev/null | grep -qF "${UHTTPD_INTERPRETER}"; then
+        uci del_list uhttpd.main.interpreter="${UHTTPD_INTERPRETER}"
+        uci commit uhttpd
+        echo "libernet-mod: removed PHP-CGI interpreter from uhttpd"
+    fi
+fi
+
+if [ -x /etc/init.d/uhttpd ]; then
+    /etc/init.d/uhttpd reload >/dev/null 2>&1 || true
+fi
+
+exit 0

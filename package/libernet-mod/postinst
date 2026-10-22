@@ -1,0 +1,35 @@
+#!/bin/sh
+# postinst for libernet-mod — runs on the OpenWrt target after install.
+# Idempotent: safe to run again (e.g. package upgrade).
+
+set -u
+
+LIBERNET_DIR="/root/libernet"
+UHTTPD_INTERPRETER=".php=/usr/bin/php-cgi"
+
+# 1. Make the helper scripts executable
+if [ -d "${LIBERNET_DIR}/bin" ]; then
+    chmod +x "${LIBERNET_DIR}"/bin/*.sh 2>/dev/null || true
+fi
+
+# 2. Enable PHP-CGI in uhttpd so the web UI at /www/libernet works
+if command -v uci >/dev/null 2>&1; then
+    if ! uci get uhttpd.main.interpreter 2>/dev/null | grep -qF "${UHTTPD_INTERPRETER}"; then
+        uci add_list uhttpd.main.interpreter="${UHTTPD_INTERPRETER}"
+        uci commit uhttpd
+        echo "libernet-mod: registered PHP-CGI interpreter in uhttpd"
+    fi
+fi
+
+# 3. Reload uhttpd to pick up the interpreter
+if [ -x /etc/init.d/uhttpd ]; then
+    /etc/init.d/uhttpd reload >/dev/null 2>&1 || /etc/init.d/uhttpd restart >/dev/null 2>&1 || true
+fi
+
+# 4. Seed default config on first install (service.sh also does this at runtime)
+if [ -x "${LIBERNET_DIR}/bin/service.sh" ]; then
+    : # service.sh self-seeds system/config.json on first run
+fi
+
+echo "libernet-mod installed. Web UI: http://<router-ip>/libernet/"
+exit 0
