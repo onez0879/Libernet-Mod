@@ -15,10 +15,25 @@ LIBERNET_DIR="${LIBERNET_DIR:-/root/libernet}"
 
 SYSTEM_CONFIG="${LIBERNET_DIR}/system/config.json"
 
+# Self-heal: ensure all scripts are executable regardless of how IPK was built.
+chmod +x "${LIBERNET_DIR}/bin/"*.sh 2>/dev/null
+
+# Register PHP-CGI with uhttpd if not already present.
+if command -v uci >/dev/null 2>&1; then
+    PHP_REG=$(uci get uhttpd.main.interpreter 2>/dev/null || true)
+    if ! echo "${PHP_REG}" | grep -q '\.php=/usr/bin/php-cgi'; then
+        uci add_list uhttpd.main.interpreter='.php=/usr/bin/php-cgi' 2>/dev/null
+        uci commit uhttpd 2>/dev/null
+        /etc/init.d/uhttpd reload 2>/dev/null
+    fi
+fi
+
 # First-run safety: seed config.json from the shipped default template
 # so jq never reads a missing file.
 if [ ! -f "${SYSTEM_CONFIG}" ] && [ -f "${LIBERNET_DIR}/system/config.default.json" ]; then
     cp "${LIBERNET_DIR}/system/config.default.json" "${SYSTEM_CONFIG}"
+    chmod 600 "${SYSTEM_CONFIG}"
+    echo "seeded ${SYSTEM_CONFIG} from default"
 fi
 
 TUNNEL_MODE="$(jq -r '.tunnel.mode' "${SYSTEM_CONFIG}")"
