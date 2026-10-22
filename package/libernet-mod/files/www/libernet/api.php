@@ -1,7 +1,18 @@
 <?php
 include "config.inc.php";
-//include('auth.php');
-//check_session();
+include('auth.php');
+
+// API guard: reject unauthenticated calls with JSON + HTTP 401 instead of a
+// redirect, so the front-end never sees a login HTML page as an API response.
+if ((!isset($_SESSION['username'])) || (!isset($_SESSION['password']))) {
+    http_response_code(401);
+    header("Content-Type: application/json; charset=UTF-8");
+    echo json_encode([
+        "status" => "ERROR",
+        "data" => "unauthorized",
+    ]);
+    exit;
+}
 function formatBytes($bytes, $precision = 2)
 {
     $units = ["B", "KB", "MB", "GB", "TB"];
@@ -793,7 +804,7 @@ if (isset($_POST)) {
             $host = $json["host"];
             exec(
                 "ping -4Ac 1 -W 1 " .
-                    $host .
+                    escapeshellarg($host) .
                     " | grep PING | awk '{print $3}' | sed 's/(//g; s/)//g; s/://g' | sed -n '1p'",
                 $output,
                 $retval

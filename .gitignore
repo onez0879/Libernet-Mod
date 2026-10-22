@@ -1,11 +1,26 @@
 # Router-specific state. Never publish credentials, generated caches, or logs.
-package/libernet-mod/files/root/libernet/system/config.json
-package/libernet-mod/files/root/libernet/cache.db
-package/libernet-mod/files/root/libernet/system/cache.db
-package/libernet-mod/files/root/libernet/log/*.log
+#
+# NOTE: the package tree nests the OpenWrt root as files/root/root/, so real
+# paths always contain the doubled "root/root". Keep patterns in sync.
 
-# Known test/connection profiles: review them before adding to Git.
-package/libernet-mod/files/root/libernet/bin/config/**/tes.json
-package/libernet-mod/files/root/libernet/bin/config/**/testing.json
-package/libernet-mod/files/root/libernet/bin/config/**/biz*.json
-package/libernet-mod/files/root/libernet/bin/config/**/IG.json
+# Live system config (holds the web UI username/password).
+package/libernet-mod/files/root/root/libernet/system/config.json
+
+# Generated caches and databases.
+package/libernet-mod/files/root/root/libernet/system/cache.db
+package/libernet-mod/files/root/root/libernet/cache.db
+
+# Runtime logs.
+package/libernet-mod/files/root/root/libernet/log/*.log
+
+# Private keys and certificates. stunnel points at stunnel.pem; ship a
+# placeholder instead so no real key ever lands in Git.
+package/libernet-mod/files/root/root/libernet/bin/config/stunnel/*.pem
+
+# User connection profiles: these carry live SSH/proxy credentials.
+package/libernet-mod/files/root/root/libernet/bin/config/*/*.json
+package/libernet-mod/files/root/root/libernet/bin/config/*/*.conf
+
+# Local build output.
+*.ipk
+build_dir/

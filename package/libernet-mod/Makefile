@@ -17,6 +17,7 @@ define Package/libernet-mod
   CATEGORY:=Network
   TITLE:=Libernet Mod web interface and tunnel scripts
   URL:=https://github.com/onez0879/Libernet-Mod
+  DEPENDS:=+bash +screen +curl +jq +iptables +kmod-tun +php8-cli +php8-mod-session +stunnel +v2ray-core +mihomo
 endef
 
 define Package/libernet-mod/description
