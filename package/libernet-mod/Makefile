@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libernet-mod
-PKG_VERSION:=2026.09.08
+PKG_VERSION:=2026.10.22
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
@@ -17,7 +17,10 @@ define Package/libernet-mod
   CATEGORY:=Network
   TITLE:=Libernet Mod web interface and tunnel scripts
   URL:=https://github.com/onez0879/Libernet-Mod
-  DEPENDS:=+bash +curl +librt +libpthread +coreutils +coreutils-stdbuf +screen +jq +ip-full +kmod-tun +openssh-client +shadowsocks-libev-ss-local +dnsmasq-full +stubby +php8 +php8-cgi +php8-mod-json +php8-mod-session +python3 +httping +https-dns-proxy +stunnel +v2ray-core +openvpn-openssl
+  DEPENDS:=+bash +curl +librt +libpthread +coreutils +coreutils-stdbuf +screen \
+	+jq +ip-full +iptables-nft +openssh-client +dnsmasq-full +stubby \
+	+php8 +php8-cgi +php8-mod-session +python3 +httping +https-dns-proxy \
+	+stunnel +v2ray-core +openvpn-openssl
 endef
 
 define Package/libernet-mod/description
