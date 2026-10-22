@@ -2,9 +2,9 @@
 include "config.inc.php";
 include('auth.php');
 
-// API guard: reject unauthenticated calls with JSON + HTTP 401 instead of a
-// redirect, so the front-end never sees a login HTML page as an API response.
-if ((!isset($_SESSION['username'])) || (!isset($_SESSION['password']))) {
+// API guard: only when login is enabled in config.json. With auth off the
+// panel stays open (LAN convenience) and every action is allowed through.
+if (auth_enabled() && ((!isset($_SESSION['username'])) || (!isset($_SESSION['password'])))) {
     http_response_code(401);
     header("Content-Type: application/json; charset=UTF-8");
     echo json_encode([
