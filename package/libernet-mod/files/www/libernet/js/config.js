@@ -499,6 +499,23 @@ const app = new Vue({
         }, 500)
     },
     created() {
-        this.getProfiles(0)
+        // init mode + profile from the router system config so the dropdown
+        // and Load follow the configured mode (was: empty dropdown, SSH mode)
+        this.getSystemConfig().then((system) => {
+            const names = ["ssh", "v2ray", "qssh"]
+            const tunnel = (system && system.tunnel) || {}
+            const m = tunnel.mode
+            const mode = (m === 0 || m === 1 || m === 2) ? m : 0
+            const prof = (tunnel.profile && tunnel.profile[names[mode]]) || ""
+            if (mode === this.config.mode) {
+                this.getProfiles(mode)
+                this.config.profile = prof
+            } else {
+                // the config.mode watcher loads the right profiles, clears the
+                // stale profile and syncs temp.mode; restore saved profile after
+                this.config.mode = mode
+                this.$nextTick(() => { this.config.profile = prof })
+            }
+        })
     }
 })
