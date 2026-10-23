@@ -209,40 +209,20 @@
         elArc.style.strokeDashoffset = ARC * (1 - pct);
         elNeedle.setAttribute('transform', 'rotate(' + (-90 + pct * 180) + ' 160 150)');
     }
-    function count(el, t, d, ms, done) {
-        var s = performance.now();
-        (function step(now) {
-            var p = Math.min(1, (now - s) / ms), e = 1 - Math.pow(1 - p, 3);
-            el.textContent = (t * e).toFixed(d || 0);
-            if (p < 1) requestAnimationFrame(step); else if (done) done();
-        })(s);
-    }
-    function sweep(val, unit, ph, ms, done) {
-        var max = scaleMax(val);
-        elUnit.textContent = unit;
-        elPhase.textContent = ph;
-        var s = performance.now(), from = 0;
-        (function step(now) {
-            var p = Math.min(1, (now - s) / ms), e = 1 - Math.pow(1 - p, 3);
-            var v = from + (val - from) * e;
-            elValue.textContent = v.toFixed(val < 10 ? 1 : 0);
-            paint(v, max);
-            if (p < 1) requestAnimationFrame(step); else if (done) done();
-        })(s);
-    }
+    var cur = 0, target = 0, maxScale = 10, done = false, busy = false, settle = 0;
+
+    (function loop() {
+        cur += (target - cur) * 0.22;
+        elValue.textContent = Math.round(cur);
+        paint(cur, maxScale);
+        maxScale += (scaleMax(target) - maxScale) * 0.08;
+        if (!done || settle++ < 90) requestAnimationFrame(loop);
+    })();
     function setBusy(b) {
         var btn = document.getElementById('stStart');
         btn.disabled = b;
         btn.innerHTML = b ? '<i class="fa fa-circle-o-notch fa-spin"></i> Testing...' : '<i class="fa fa-play"></i> Test Speed';
-        if (b) {
-            elPhase.textContent = 'menghubungi server';
-            elBar.style.width = '20%';
-            setTimeout(function () { if (btn.disabled) elBar.style.width = '60%'; }, 5000);
-            setTimeout(function () { if (btn.disabled) elBar.style.width = '85%'; }, 15000);
-        } else {
-            elBar.style.width = '100%';
-            setTimeout(function () { elBar.style.width = '0'; }, 800);
-        }
+        if (b) elPhase.textContent = 'menghubungi server';
     }
     function save(r) {
         var k = 'libernet_speedtest_history', list = [];
@@ -264,43 +244,91 @@
         box.style.display = 'block';
     }
 
+    function poll() {
+        fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'speedtest_progress' })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            if (!d.status) throw new Error(d.message || 'gagal baca progres');
+            var labels = { starting: 'mulai', ping: 'ping', download: 'download', upload: 'upload', result: 'selesai' };
+            elPhase.textContent = labels[d.phase] || d.phase;
+            if (typeof d.progress === 'number') elBar.style.width = d.progress + '%';
+            elUnit.textContent = d.phase === 'ping' ? 'ms' : 'Mbps';
+            if (d.value) target = Number(d.value) || 0;
+            if (d.phase === 'ping' && d.value) document.getElementById('stPing').textContent = d.value;
+            if (d.phase === 'download' && d.value) document.getElementById('stDown').textContent = d.value;
+            if (d.phase === 'upload' && d.value) document.getElementById('stUp').textContent = d.value;
+
+            if (d.done) {
+                done = true; busy = false; settle = 0;
+                target = Number(d.download) || 0;
+                elUnit.textContent = 'Mbps';
+                elPhase.textContent = 'selesai';
+                elBar.style.width = '100%';
+                document.getElementById('stPing').textContent = d.ping;
+                document.getElementById('stDown').textContent = d.download;
+                document.getElementById('stUp').textContent = d.upload;
+                document.getElementById('stServer').textContent = d.server || '-';
+                document.getElementById('stIsp').textContent = d.isp || '-';
+                setBusy(false);
+                save({
+                    when: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                    ping: d.ping, download: d.download, upload: d.upload,
+                    server: d.server || '-', isp: d.isp || '-'
+                });
+                setTimeout(function () { elBar.style.width = '0'; }, 900);
+                return;
+            }
+
+            if (d.stale) {
+                done = true; busy = false;
+                elPhase.textContent = 'timeout';
+                setBusy(false);
+            }
+        })
+        .catch(function (err) {
+            done = true; busy = false;
+            elPhase.textContent = 'gagal';
+            setBusy(false);
+            if (window.Swal) Swal.fire({ icon: 'error', title: 'Speedtest gagal', text: err.message || '' });
+        });
+    }
+
     window.runSpeedtest = function () {
-        setBusy(true);
+        if (busy) return;
+        busy = true; done = false; settle = 0;
+        cur = 0; target = 0; maxScale = 10;
         elValue.textContent = '0'; paint(0, 10);
-        document.getElementById('stPing').textContent = '–';
-        document.getElementById('stDown').textContent = '–';
-        document.getElementById('stUp').textContent = '–';
+        elPhase.textContent = 'mulai';
+        elBar.style.width = '0%';
+        ['stPing', 'stDown', 'stUp', 'stServer', 'stIsp'].forEach(function (id) {
+            document.getElementById(id).textContent = '–';
+        });
+        setBusy(true);
+
         fetch('api.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'run_speedtest' })
         })
         .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (!data.status) throw new Error(data.message || 'Speedtest failed');
-            var ping = Number(data.ping) || 0, down = Number(data.download) || 0, up = Number(data.upload) || 0;
-            document.getElementById('stServer').textContent = data.server || '-';
-            document.getElementById('stIsp').textContent = data.isp || '-';
-            count(document.getElementById('stPing'), ping, 0, 400, function () {
-                sweep(down, 'Mbps', 'download', 1200, function () {
-                    document.getElementById('stDown').textContent = down;
-                    sweep(up, 'Mbps', 'upload', 1200, function () {
-                        document.getElementById('stUp').textContent = up;
-                        sweep(down, 'Mbps', 'hasil download', 900);
-                        save({
-                            when: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-                            ping: ping, download: down, upload: up,
-                            server: data.server || '-', isp: data.isp || '-'
-                        });
-                    });
-                });
-            });
+        .then(function (d) {
+            if (!d.status) throw new Error(d.message || 'Speedtest gagal');
+            poll();
+            var t = setInterval(function () {
+                if (done) { clearInterval(t); return; }
+                poll();
+            }, 250);
         })
         .catch(function (err) {
+            busy = false; done = true;
             elPhase.textContent = 'gagal';
+            setBusy(false);
             if (window.Swal) Swal.fire({ icon: 'error', title: 'Speedtest gagal', text: err.message || '' });
-        })
-        .finally(function () { setBusy(false); });
+        });
     };
 
     try { render(JSON.parse(localStorage.getItem('libernet_speedtest_history') || '[]')); } catch (e) {}

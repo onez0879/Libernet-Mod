@@ -736,45 +736,132 @@ if (isset($_POST)) {
             putenv("USER=root");
             putenv("LOGNAME=root");
 
-            $json_out = shell_exec(
-                "/usr/bin/speedtest --accept-license --accept-gdpr --progress=no --format=json 2>&1"
+            $log = "/tmp/libernet_speedtest.json";
+            $lock = "/tmp/libernet_speedtest.lock";
+
+            if (is_file($lock)) {
+                if (time() - filemtime($lock) < 90) {
+                    echo json_encode([
+                        "status" => false,
+                        "message" => "Test already running",
+                    ]);
+
+                    break;
+                }
+                @unlink($lock);
+            }
+
+            @unlink($log);
+            file_put_contents($lock, (string) time());
+
+            $cmd = "/usr/bin/nohup /usr/bin/speedtest --accept-license --accept-gdpr "
+                . "--progress=yes --progress-update-interval=250 --format=json "
+                . "> " . escapeshellarg($log) . " 2>&1 &";
+            shell_exec($cmd);
+
+            echo json_encode(["status" => true]);
+            break;
+
+        case "speedtest_progress":
+            $log = "/tmp/libernet_speedtest.json";
+            $lock = "/tmp/libernet_speedtest.lock";
+
+            if (!is_file($log) || filesize($log) === 0) {
+                echo json_encode([
+                    "status" => true,
+                    "done" => false,
+                    "phase" => "starting",
+                    "value" => 0,
+                    "progress" => 0,
+                ]);
+
+                break;
+            }
+
+            $content = file_get_contents($log);
+            $lines = array_values(
+                array_filter(array_map("trim", explode("\n", $content)))
             );
+            $last = end($lines);
+            $data = json_decode($last, true);
 
-            if (!$json_out) {
+            if (!$data || !isset($data["type"])) {
                 echo json_encode([
-                    "status" => false,
-                    "message" => "Speedtest failed",
+                    "status" => true,
+                    "done" => false,
+                    "phase" => "starting",
+                    "value" => 0,
+                    "progress" => 0,
                 ]);
 
                 break;
             }
 
-            $data = json_decode($json_out, true);
+            $type = $data["type"];
+            $phase = $type;
+            $value = 0;
+            $progress = 0;
 
-            if (!$data) {
-                echo json_encode([
-                    "status" => false,
-                    "message" => $json_out,
-                ]);
-
-                break;
+            switch ($type) {
+                case "testStart":
+                    $phase = "starting";
+                    $progress = 0;
+                    break;
+                case "ping":
+                    $phase = "ping";
+                    $value = round(($data["ping"]["latency"] ?? 0) * 10) / 10;
+                    $progress = 10;
+                    break;
+                case "download":
+                    $phase = "download";
+                    $value = round(($data["download"]["bandwidth"] * 8) / 1000000);
+                    $progress = 10 + (int) round(($data["download"]["progress"] ?? 0) * 45);
+                    break;
+                case "upload":
+                    $phase = "upload";
+                    $value = round(($data["upload"]["bandwidth"] * 8) / 1000000);
+                    $progress = 55 + (int) round(($data["upload"]["progress"] ?? 0) * 45);
+                    break;
+                case "result":
+                    $phase = "result";
+                    $progress = 100;
+                    $value = round(($data["download"]["bandwidth"] * 8) / 1000000);
+                    $payload = [
+                        "status" => true,
+                        "done" => true,
+                        "phase" => "result",
+                        "progress" => 100,
+                        "value" => $value,
+                        "ping" => round($data["ping"]["latency"]),
+                        "download" => round(($data["download"]["bandwidth"] * 8) / 1000000),
+                        "upload" => round(($data["upload"]["bandwidth"] * 8) / 1000000),
+                        "isp" => $data["isp"] ?? "-",
+                        "server" => (isset($data["server"]["name"]) ? $data["server"]["name"] : "-")
+                            . ", "
+                            . (isset($data["server"]["location"]) ? $data["server"]["location"] : "-"),
+                    ];
+                    @unlink($lock);
+                    echo json_encode($payload);
+                    break;
+                default:
+                    $progress = 0;
+                    break;
             }
 
-            echo json_encode([
-                "status" => true,
-
-                "ping" => round($data["ping"]["latency"]),
-                "download" => round(
-                    ($data["download"]["bandwidth"] * 8) / 1000000
-                ),
-                "upload" => round(($data["upload"]["bandwidth"] * 8) / 1000000),
-
-                "isp" => $data["isp"],
-
-                "server" => $data["server"]["name"],
-                "location" => $data["server"]["location"],
-            ]);
-
+            if ($type !== "result") {
+                $stale = false;
+                if (is_file($log)) {
+                    $stale = time() - filemtime($log) > 120;
+                }
+                echo json_encode([
+                    "status" => true,
+                    "done" => false,
+                    "phase" => $phase,
+                    "value" => $value,
+                    "progress" => $progress,
+                    "stale" => $stale,
+                ]);
+            }
             break;
         case "check_update":
             $update_status = file_get_contents(
