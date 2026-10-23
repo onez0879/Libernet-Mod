@@ -179,6 +179,7 @@ const app = new Vue({
         'config.mode': function (mode) {
             this.getProfiles(mode)
             this.config.profile = ""
+            this.config.temp.mode = mode
         },
         'config.temp.profile': function (val) {
             this.config.temp.profile = val.split(' ').join('_')
