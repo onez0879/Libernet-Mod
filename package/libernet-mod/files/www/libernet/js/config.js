@@ -221,6 +221,8 @@ const app = new Vue({
                         this.getQsshConfig()
                         break
                 }
+                // ensure temp.mode follows config.mode so form always matches
+                this.config.temp.mode = this.config.mode
                 // resolve server host
                 this.resolveServerHost()
             })
@@ -274,10 +276,27 @@ const app = new Vue({
                 profile: this.config.profile
             }).then((res) => {
                 const temp = this.config.temp
+                // pin V2RAY form even if saved config is incomplete/missing
+                temp.mode = 1
+                temp.profile = this.config.profile
+
                 const profile = temp.modes[1].profile
-                const protocol = res.data.data.outbounds[0].protocol
-                const network = res.data.data.outbounds[0].streamSettings.network
-                const security = res.data.data.outbounds[0].streamSettings.security
+                const data = res.data && res.data.data ? res.data.data : null
+                if (!data || !data.outbounds || !data.outbounds[0]) {
+                    Swal.fire({
+                        icon: "info",
+                        title: "Config kosong",
+                        text: "Silakan pilih profil yang benar",
+                        showConfirmButton: false,
+                        timer: 1500
+                    })
+                    return
+                }
+
+                const protocol = data.outbounds[0].protocol
+                const streamSettings = data.outbounds[0].streamSettings
+                const network = streamSettings ? streamSettings.network : "tcp"
+                const security = streamSettings ? streamSettings.security : "none"
                 let remote
                 let sni
                 let path = ""
