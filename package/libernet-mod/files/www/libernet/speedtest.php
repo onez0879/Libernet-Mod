@@ -9,46 +9,45 @@
     <style>
     .st-wrap{max-width:860px;margin:0 auto}
     .st-hero{
-        position:relative;overflow:hidden;border-radius:18px;
-        background:radial-gradient(120% 120% at 50% 0%,#1b2440 0%,#0b1020 55%,#070a14 100%);
-        color:#fff;padding:18px 16px 22px;
-        box-shadow:0 10px 30px rgba(10,16,32,.28)
+        position:relative;overflow:hidden;border-radius:14px;
+        background:#fff;border:1px solid #e6eaef;
+        color:#495057;padding:18px 16px 22px;
+        box-shadow:0 2px 10px rgba(31,45,61,.06)
     }
     .st-hero::after{
         content:"";position:absolute;inset:0;pointer-events:none;
-        background:radial-gradient(60% 40% at 50% 100%,rgba(0,196,255,.10),transparent 70%)
+        background:radial-gradient(60% 40% at 50% 100%,rgba(84,115,167,.05),transparent 70%)
     }
     .st-brand{display:flex;align-items:center;justify-content:center;gap:8px;
-        font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#7f8ba8;font-weight:700}
-    .st-brand b{color:#00c4ff}
+        font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#9aa5b1;font-weight:700}
+    .st-brand b{color:#5473a7}
     .st-gauge{position:relative;width:100%;max-width:420px;margin:6px auto 0}
     .st-gauge svg{width:100%;height:auto;display:block}
     .st-read{position:absolute;left:0;right:0;bottom:6px;text-align:center;pointer-events:none}
     .st-value{font-size:clamp(38px,11vw,60px);line-height:1;font-weight:800;
         letter-spacing:-.03em;font-variant-numeric:tabular-nums;
-        background:linear-gradient(180deg,#fff,#9fd8ff);-webkit-background-clip:text;background-clip:text;
-        -webkit-text-fill-color:transparent}
-    .st-unit{font-size:12px;letter-spacing:.22em;color:#8fa0c0;margin-top:2px}
-    .st-phase{font-size:11px;letter-spacing:.2em;color:#00c4ff;margin-top:8px;min-height:14px}
-    .st-bar{height:4px;border-radius:99px;background:rgba(255,255,255,.10);overflow:hidden;margin:14px auto 0;max-width:360px}
+        color:#2f3e57}
+    .st-unit{font-size:12px;letter-spacing:.22em;color:#8a94a6;margin-top:2px}
+    .st-phase{font-size:11px;letter-spacing:.2em;color:#5473a7;margin-top:8px;min-height:14px}
+    .st-bar{height:4px;border-radius:99px;background:#eef1f5;overflow:hidden;margin:14px auto 0;max-width:360px}
     .st-bar>i{display:block;height:100%;width:0;border-radius:99px;
-        background:linear-gradient(90deg,#00e0ff,#7c5cff);transition:width .4s ease}
+        background:linear-gradient(90deg,#5473a7,#4aa3df);transition:width .4s ease}
     .st-tiles{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
     .st-tile{flex:1 1 120px;min-width:104px;text-align:center;border-radius:12px;padding:10px 8px;
-        background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
-    .st-tile i{font-size:13px;color:#5b6b8c}
+        background:#f8f9fb;border:1px solid #e6eaef}
+    .st-tile i{font-size:13px;color:#9aa5b1}
     .st-tile .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
-    .st-tile .l{font-size:10px;letter-spacing:.16em;color:#8fa0c0;margin-top:2px}
-    .st-tile.down .v{color:#00c4ff}
-    .st-tile.up .v{color:#7c5cff}
+    .st-tile .l{font-size:10px;letter-spacing:.16em;color:#8a94a6;margin-top:2px}
+    .st-tile.down .v{color:#4aa3df}
+    .st-tile.up .v{color:#5473a7}
     .st-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
-        margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.07);font-size:12px;color:#8fa0c0}
-    .st-foot b{display:block;color:#e7eefc;font-weight:600;font-size:13px}
+        margin-top:14px;padding-top:12px;border-top:1px solid #eef1f5;font-size:12px;color:#8a94a6}
+    .st-foot b{display:block;color:#495057;font-weight:600;font-size:13px}
     .st-btn{display:inline-flex;align-items:center;gap:8px;border:0;cursor:pointer;
         padding:12px 28px;border-radius:99px;font-weight:700;font-size:14px;letter-spacing:.04em;
-        color:#04121f;background:linear-gradient(135deg,#00e0ff,#00b3ff);
-        box-shadow:0 8px 22px rgba(0,180,255,.35);transition:transform .15s,box-shadow .15s}
-    .st-btn:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(0,180,255,.45)}
+        color:#fff;background:#5473a7;
+        box-shadow:0 4px 12px rgba(84,115,167,.30);transition:transform .15s,box-shadow .15s}
+    .st-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(84,115,167,.40)}
     .st-btn[disabled]{opacity:.55;cursor:default;transform:none;box-shadow:none}
     .st-actions{text-align:center;margin-top:16px}
     .st-hist{margin-top:14px;border-radius:14px;background:#fff;border:1px solid #dfe3e8;overflow:hidden}
@@ -115,20 +114,20 @@
             <svg viewBox="0 0 320 190" aria-hidden="true">
                 <defs>
                     <linearGradient id="stGrad" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stop-color="#00e0ff"/>
-                        <stop offset="55%" stop-color="#00c4ff"/>
-                        <stop offset="100%" stop-color="#7c5cff"/>
+                        <stop offset="0%" stop-color="#5473a7"/>
+                        <stop offset="55%" stop-color="#4aa3df"/>
+                        <stop offset="100%" stop-color="#8fa8cf"/>
                     </linearGradient>
                 </defs>
                 <path d="M 40 150 A 120 120 0 0 1 280 150" fill="none"
-                      stroke="rgba(255,255,255,.09)" stroke-width="10" stroke-linecap="round"/>
+                      stroke="#e9edf3" stroke-width="10" stroke-linecap="round"/>
                 <path id="stArc" d="M 40 150 A 120 120 0 0 1 280 150" fill="none"
                       stroke="url(#stGrad)" stroke-width="10" stroke-linecap="round"
                       stroke-dasharray="376.99" stroke-dashoffset="376.99"/>
                 <g id="stTicks"></g>
                 <g id="stNeedle" transform="rotate(-90 160 150)">
-                    <line x1="160" y1="150" x2="160" y2="52" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-                    <circle cx="160" cy="150" r="7" fill="#0b1020" stroke="#00c4ff" stroke-width="3"/>
+                    <line x1="160" y1="150" x2="160" y2="52" stroke="#5473a7" stroke-width="3" stroke-linecap="round"/>
+                    <circle cx="160" cy="150" r="7" fill="#fff" stroke="#5473a7" stroke-width="3"/>
                 </g>
             </svg>
             <div class="st-read">
@@ -197,7 +196,7 @@
         var l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         l.setAttribute('x1', x1); l.setAttribute('y1', y1);
         l.setAttribute('x2', x2); l.setAttribute('y2', y2);
-        l.setAttribute('stroke', m ? 'rgba(255,255,255,.30)' : 'rgba(255,255,255,.14)');
+        l.setAttribute('stroke', m ? '#c3cbd6' : '#dfe4ea');
         l.setAttribute('stroke-width', m ? 2 : 1.5);
         elTicks.appendChild(l);
     }
