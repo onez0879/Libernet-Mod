@@ -1,4 +1,3 @@
-<?php include('auth.php'); check_session(); ?>
 <!doctype html>
 <html lang="en">
 <head>
@@ -192,23 +191,30 @@
                               </div>
 
                             <div v-if="config.temp.mode === 1" class="v2ray">
-                                <div class="v2ray-import pb-lg-2">
-                                    <label>Import from URI / JSON</label>
-                                    <textarea class="form-control" rows="2"
-                                        placeholder="vmess://… or vless://… or trojan://… or paste JSON"
-                                        v-model="importPayload"></textarea>
-                                    <button type="button" class="btn btn-primary mt-1"
-                                        @click="importConfigFromText">Import</button>
-                                </div>
                                 <div v-if="config.temp.modes[1].profile.protocol === 'vmess'" class="form-row pt-lg-2 pb-lg-2 v2ray-vmess">
                                     <div class="col">
                                         <label>Import VMess from URL</label>
                                         <div class="d-flex">
-                                            <input type="text" class="form-control mr-1"
-                                                placeholder="vmess://xxxxxxxxxxxx"
-                                                v-model="config.temp.modes[1].import_url">
-                                            <button type="button" class="btn btn-primary ml-1"
-                                                @click="importV2rayConfig">Import</button>
+                                            <input type="text" class="form-control mr-1" placeholder="vmess://xxxxxxxxxxxx" v-model="config.temp.modes[1].import_url">
+                                            <button type="button" class="btn btn-primary ml-1" @click="importV2rayConfig">Import</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-if="config.temp.modes[1].profile.protocol === 'vless'" class="form-row pt-lg-2 pb-lg-2 v2ray-vless">
+                                    <div class="col">
+                                        <label>Import VLESS from URL</label>
+                                        <div class="d-flex">
+                                            <input type="text" class="form-control mr-1" placeholder="vless://xxxxxxxxxxxx" v-model="config.temp.modes[1].import_url">
+                                            <button type="button" class="btn btn-primary ml-1" @click="importV2rayConfig">Import</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-if="config.temp.modes[1].profile.protocol === 'trojan'" class="form-row pt-lg-2 pb-lg-2 v2ray-trojan">
+                                    <div class="col">
+                                        <label>Import Trojan from URL</label>
+                                        <div class="d-flex">
+                                            <input type="text" class="form-control mr-1" placeholder="trojan://xxxxxxxxxxxx" v-model="config.temp.modes[1].import_url">
+                                            <button type="button" class="btn btn-primary ml-1" @click="importV2rayConfig">Import</button>
                                         </div>
                                     </div>
                                 </div>
