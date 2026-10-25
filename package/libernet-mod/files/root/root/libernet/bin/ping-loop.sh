@@ -76,6 +76,32 @@ while true; do
 
             fi
 
+            # v2ray.log juga dipotong (append-mode, aman di-truncate):
+            # tanpa ini file /tmp/v2ray.log membengkak puluhan MB.
+            LOG="/tmp/v2ray.log"
+
+            if [ -f "$LOG" ]; then
+
+                SIZE=$(wc -c < "$LOG" 2>/dev/null)
+
+                # 512KB
+                [ "$SIZE" -ge 524288 ] && : > "$LOG"
+
+            fi
+
+            # qload.log juga dipotong: qload nulis satu baris [CONNECT]
+            # per koneksi, jadi ikut membengkak kalau service jalan lama.
+            LOG="/tmp/qload.log"
+
+            if [ -f "$LOG" ]; then
+
+                SIZE=$(wc -c < "$LOG" 2>/dev/null)
+
+                # 512KB
+                [ "$SIZE" -ge 524288 ] && : > "$LOG"
+
+            fi
+
         fi
 
         if check_host; then

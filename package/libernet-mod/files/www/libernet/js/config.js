@@ -2,6 +2,7 @@ const app = new Vue({
     el: '#app',
     data() {
         return {
+            importPayload: "",
             config: {
                 mode: 0,
                 profile: "",
@@ -169,7 +170,7 @@ const app = new Vue({
                         }
                     ]
                 },
-                
+
                 system: {}
             }
         }
@@ -178,6 +179,7 @@ const app = new Vue({
         'config.mode': function (mode) {
             this.getProfiles(mode)
             this.config.profile = ""
+            this.config.temp.mode = mode
         },
         'config.temp.profile': function (val) {
             this.config.temp.profile = val.split(' ').join('_')
@@ -185,7 +187,7 @@ const app = new Vue({
     },
     methods: {
         decodePath: _.debounce(function () {
-            this.config.temp.modes[2].profile.stream.path = decodeURIComponent(JSON.parse('"' + this.config.temp.modes[1].profile.stream.path + '"'))
+            this.config.temp.modes[1].profile.stream.path = decodeURIComponent(JSON.parse('"' + this.config.temp.modes[1].profile.stream.path + '"'))
         }, 500),
         getProfiles(mode) {
             let action
@@ -220,6 +222,8 @@ const app = new Vue({
                         this.getQsshConfig()
                         break
                 }
+                // ensure temp.mode follows config.mode so form always matches
+                this.config.temp.mode = this.config.mode
                 // resolve server host
                 this.resolveServerHost()
             })
@@ -273,10 +277,27 @@ const app = new Vue({
                 profile: this.config.profile
             }).then((res) => {
                 const temp = this.config.temp
+                // pin V2RAY form even if saved config is incomplete/missing
+                temp.mode = 1
+                temp.profile = this.config.profile
+
                 const profile = temp.modes[1].profile
-                const protocol = res.data.data.outbounds[0].protocol
-                const network = res.data.data.outbounds[0].streamSettings.network
-                const security = res.data.data.outbounds[0].streamSettings.security
+                const data = res.data && res.data.data ? res.data.data : null
+                if (!data || !data.outbounds || !data.outbounds[0]) {
+                    Swal.fire({
+                        icon: "info",
+                        title: "Config kosong",
+                        text: "Silakan pilih profil yang benar",
+                        showConfirmButton: false,
+                        timer: 1500
+                    })
+                    return
+                }
+
+                const protocol = data.outbounds[0].protocol
+                const streamSettings = data.outbounds[0].streamSettings
+                const network = streamSettings ? streamSettings.network : "tcp"
+                const security = streamSettings ? streamSettings.security : "none"
                 let remote
                 let sni
                 let path = ""
@@ -404,34 +425,48 @@ const app = new Vue({
                 this.getProfiles(this.config.mode)
             })
         },
-        importV2rayConfig() {
-            const protocol = this.config.temp.modes[1].profile.protocol
-            const importUrl = this.config.temp.modes[1].import_url
-            const config = JSON.parse(atob(importUrl.split("://")[1]))
-            const profile = this.config.temp.modes[1].profile
-            switch (protocol) {
-                case "vmess":
-                    const host = config.ps
-                    const port = config.port
-                    const network = config.net
-                    const security = config.tls
-                    const alterId = config.aid
-                    const vmess_id = config.id
-                    const vmess_security = config.type
-                    const sni = config.host
-                    const path = config.path
-                    profile.server.host = host
-                    profile.server.port = parseInt(port)
-                    profile.network = network
-                    profile.security = security
-                    profile.server.user.level = parseInt(alterId)
-                    profile.server.user.vmess.id = vmess_id
-                    profile.server.user.vmess.security = vmess_security
-                    profile.stream.sni = sni
-                    profile.stream.path = path
-                    break
+        applyImport(text) {
+            const result = importV2rayConfigFromText(text)
+            if (!result) {
+                Swal.fire({
+                    icon: "error",
+                    title: "Import failed",
+                    text: "Unrecognized URI or JSON"
+                })
+                return
             }
-            this.resolveServerHost()
+            const p = this.config.temp.modes[1].profile
+            p.protocol = result.protocol
+            p.network = result.profile.network
+            p.security = result.profile.network === "tcp" ? "tls"
+                       : result.profile.network === "http" ? "none"
+                       : result.profile.security
+            p.server.host = result.profile.server.host
+            p.server.port = result.profile.server.port
+            p.server.user.level = result.profile.server.user.level
+            p.server.user.vmess.id = result.profile.server.user.vmess.id
+            p.server.user.vmess.security = result.profile.server.user.vmess.security
+            p.server.user.vless.id = result.profile.server.user.vless.id
+            p.server.user.trojan.password = result.profile.server.user.trojan.password
+            p.stream.sni = result.profile.stream.sni
+            p.stream.path = result.profile.stream.path
+            if (!this.config.temp.profile) {
+                this.config.temp.profile = result.profile.server.host
+            }
+            if (result.needsHostResolve) this.resolveServerHost()
+            Swal.fire({
+                position: "center",
+                icon: "success",
+                title: "Config imported",
+                showConfirmButton: false,
+                timer: 1200
+            })
+        },
+        importConfigFromText() {
+            this.applyImport(this.importPayload)
+        },
+        importV2rayConfig() {
+            this.applyImport(this.config.temp.modes[1].import_url)
         },
         resolveServerHost: _.debounce(function () {
             switch (this.config.temp.mode) {
@@ -464,6 +499,23 @@ const app = new Vue({
         }, 500)
     },
     created() {
-        this.getProfiles(0)
+        // init mode + profile from the router system config so the dropdown
+        // and Load follow the configured mode (was: empty dropdown, SSH mode)
+        this.getSystemConfig().then((system) => {
+            const names = ["ssh", "v2ray", "qssh"]
+            const tunnel = (system && system.tunnel) || {}
+            const m = tunnel.mode
+            const mode = (m === 0 || m === 1 || m === 2) ? m : 0
+            const prof = (tunnel.profile && tunnel.profile[names[mode]]) || ""
+            if (mode === this.config.mode) {
+                this.getProfiles(mode)
+                this.config.profile = prof
+            } else {
+                // the config.mode watcher loads the right profiles, clears the
+                // stale profile and syncs temp.mode; restore saved profile after
+                this.config.mode = mode
+                this.$nextTick(() => { this.config.profile = prof })
+            }
+        })
     }
 })

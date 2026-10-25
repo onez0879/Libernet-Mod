@@ -52,7 +52,16 @@ class Server:
 
         # initalize payload
         self.payload = payload
-        self.forward_to = (payload_file['http']['proxy']['ip'],
+        # kalau proxy ip kosong, resolve dari host (IP otomatis ikut host)
+        _proxy_ip = payload_file['http']['proxy']['ip']
+        if not _proxy_ip:
+            try:
+                _proxy_ip = socket.gethostbyname(payload_file['host'])
+                print('Proxy IP resolved from host: {}'.format(_proxy_ip))
+                logging.info('Proxy IP resolved from host: {}'.format(_proxy_ip))
+            except Exception:
+                _proxy_ip = ''
+        self.forward_to = (_proxy_ip,
                            payload_file['http']['proxy']['port'])
         self.buffer_size = payload_file['http']['buffer']
 

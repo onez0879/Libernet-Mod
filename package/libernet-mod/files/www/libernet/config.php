@@ -133,7 +133,7 @@
                                     <div class="form-row pb-lg-2">
                                         <div class="col-md-6">
                                             <label>Proxy IP</label>
-                                            <input type="text" class="form-control" placeholder="192.168.1.1" v-model="config.temp.modes[0].profile.http.proxy.ip" required>
+                                            <input type="text" class="form-control" placeholder="kosong = otomatis dari host" v-model="config.temp.modes[0].profile.http.proxy.ip">
                                         </div>
                                         <div class="col-md-6">
                                             <label>Proxy Port</label>
@@ -152,7 +152,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label>Server IP</label>
-                                        <input type="text" class="form-control" placeholder="192.168.1.1" v-model="config.temp.modes[0].profile.ip" required>
+                                        <input type="text" class="form-control" placeholder="kosong = otomatis dari host" v-model="config.temp.modes[0].profile.ip">
                                     </div>
                                     <div class="col-md-3">
                                         <label>Server Port</label>
@@ -200,6 +200,24 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div v-if="config.temp.modes[1].profile.protocol === 'vless'" class="form-row pt-lg-2 pb-lg-2 v2ray-vless">
+                                    <div class="col">
+                                        <label>Import VLESS from URL</label>
+                                        <div class="d-flex">
+                                            <input type="text" class="form-control mr-1" placeholder="vless://xxxxxxxxxxxx" v-model="config.temp.modes[1].import_url">
+                                            <button type="button" class="btn btn-primary ml-1" @click="importV2rayConfig">Import</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-if="config.temp.modes[1].profile.protocol === 'trojan'" class="form-row pt-lg-2 pb-lg-2 v2ray-trojan">
+                                    <div class="col">
+                                        <label>Import Trojan from URL</label>
+                                        <div class="d-flex">
+                                            <input type="text" class="form-control mr-1" placeholder="trojan://xxxxxxxxxxxx" v-model="config.temp.modes[1].import_url">
+                                            <button type="button" class="btn btn-primary ml-1" @click="importV2rayConfig">Import</button>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="form-row pb-lg-2">
                                     <div class="col-md-5">
                                         <label>Server Host</label>
@@ -207,7 +225,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label>Server IP</label>
-                                        <input type="text" class="form-control" placeholder="192.168.1.1" v-model="config.temp.modes[1].profile.etc.ip" required>
+                                        <input type="text" class="form-control" placeholder="kosong = otomatis dari host" v-model="config.temp.modes[1].profile.etc.ip">
                                     </div>
                                     <div class="col-md-2">
                                         <label>Server Port</label>
@@ -324,9 +342,9 @@
                                         <label>Server IP</label>
                                         <input type="text"
                                                class="form-control"
-                                               placeholder="192.168.1.1"
+                                               placeholder="kosong = otomatis dari host"
                                                v-model="config.temp.modes[2].profile.ssh.ip"
-                                               required>
+                                               >
                                     </div>
                             
                                     <div class="col-md-3">
@@ -396,6 +414,7 @@
     </div>
 </div>
 <?php include("javascript.php"); ?>
+<script src="js/v2ray-import.js"></script>
 <script src="js/config.js"></script>
 </body>
 </html>

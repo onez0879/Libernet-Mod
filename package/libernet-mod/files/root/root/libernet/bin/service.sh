@@ -15,10 +15,25 @@ LIBERNET_DIR="${LIBERNET_DIR:-/root/libernet}"
 
 SYSTEM_CONFIG="${LIBERNET_DIR}/system/config.json"
 
+# Self-heal: ensure all scripts are executable regardless of how IPK was built.
+chmod +x "${LIBERNET_DIR}/bin/"*.sh 2>/dev/null
+
+# Register PHP-CGI with uhttpd if not already present.
+if command -v uci >/dev/null 2>&1; then
+    PHP_REG=$(uci get uhttpd.main.interpreter 2>/dev/null || true)
+    if ! echo "${PHP_REG}" | grep -q '\.php=/usr/bin/php-cgi'; then
+        uci add_list uhttpd.main.interpreter='.php=/usr/bin/php-cgi' 2>/dev/null
+        uci commit uhttpd 2>/dev/null
+        /etc/init.d/uhttpd reload 2>/dev/null
+    fi
+fi
+
 # First-run safety: seed config.json from the shipped default template
 # so jq never reads a missing file.
 if [ ! -f "${SYSTEM_CONFIG}" ] && [ -f "${LIBERNET_DIR}/system/config.default.json" ]; then
     cp "${LIBERNET_DIR}/system/config.default.json" "${SYSTEM_CONFIG}"
+    chmod 600 "${SYSTEM_CONFIG}"
+    echo "seeded ${SYSTEM_CONFIG} from default"
 fi
 
 TUNNEL_MODE="$(jq -r '.tunnel.mode' "${SYSTEM_CONFIG}")"
@@ -111,6 +126,16 @@ check_connection() {
         return 1
     }
 
+    "${LIBERNET_DIR}/bin/qload.sh" -r || {
+        cancel_services
+        return 1
+    }
+
+    wait_qload || {
+        cancel_services
+        return 1
+    }
+
     start_mihomo_tun || {
         cancel_services
         return 1
@@ -132,7 +157,10 @@ check_connection() {
 }
 
 wait_socks() {
-    local timeout=30
+    # Timeout bisa dioper sebagai argumen ke-3 (default 30 detik). Mode SSH
+    # butuh jendela lebih panjang: origin-nya flaky (502 + putus di tengah
+    # jalan), worker baru nyangkut kalau dikasih waktu retry lebih lama.
+    local timeout="${3:-30}"
     local count=0
     local start_port="${1:-1080}"
     local end_port="${2:-1083}"
@@ -334,27 +362,29 @@ ssh_service() {
     }
 
     "${LIBERNET_DIR}/bin/ssh.sh" -r || {
-        stop_services
+        stop_services -f
         return 1
     }
 
-    wait_socks || {
-        stop_services
+    # Jendela 120 detik untuk SSH: worker retry tiap 3 detik, jadi puluhan
+    # percobaan sempat lewat sebelum dinyatakan gagal (origin flaky).
+    wait_socks 1080 1083 120 || {
+        stop_services -f
         return 1
     }
 
     "${LIBERNET_DIR}/bin/qload.sh" -r || {
-        stop_services
+        stop_services -f
         return 1
     }
 
     start_mihomo || {
-        stop_services
+        stop_services -f
         return 1
     }
 
     mark_connected || {
-        stop_services
+        stop_services -f
         return 1
     }
 
@@ -371,16 +401,17 @@ qssh_service() {
 
     "${LIBERNET_DIR}/bin/qssh.sh" -r || {
         log "QSSH failed"
+        stop_services -f
         return 1
     }
 
     start_mihomo || {
-        stop_services
+        stop_services -f
         return 1
     }
 
     mark_connected || {
-        stop_services
+        stop_services -f
         return 1
     }
 
@@ -403,6 +434,7 @@ run_other_services() {
 }
 
 start_services() {
+    acquire_lock || return 1
     rm -f /tmp/libernet.manual_stop
     "${LIBERNET_DIR}/bin/log.sh" -r
     "${LIBERNET_DIR}/bin/log.sh" -c "0"
@@ -410,6 +442,10 @@ start_services() {
 
     START_TIME=$(date +%s)
     log "Starting Libernet service"
+
+    # Bersihkan sisa proses dari sesi sebelumnya (gagal start / crash /
+    # stop yang tidak tuntas) supaya tidak ada konflik port saat start.
+    sweep_stale_processes
 
     case "${TUNNEL_MODE}" in
         "0") ssh_service ;;
@@ -424,7 +460,107 @@ start_services() {
     fi
 }
 
+# Cegah start/stop berjalan bersamaan (klik ganda, tombol restart,
+# auto_recon): proses kedua MENUNGGU (maks 60 detik) sampai proses pertama
+# selesai, bukan ikut jalan dan saling bunuh. Cancel (-c) tidak menunggu:
+# ia memaksa berhenti dan memecahkan kunci. Kunci yatim (pemilik sudah
+# mati, mis. proses di-kill) langsung diambil alih. Kunci milik proses
+# sendiri (panggilan bersarang, mis. stop dari jalur gagal saat start)
+# langsung lolos.
+acquire_lock() {
+    local lockdir="/tmp/libernet.lock"
+    local waited=0
+    local owner
+    while true; do
+        if mkdir "$lockdir" 2>/dev/null; then
+            echo "$$" > "$lockdir/pid"
+            trap 'rm -rf /tmp/libernet.lock' EXIT
+            return 0
+        fi
+        owner=$(cat "$lockdir/pid" 2>/dev/null)
+        if [ "$owner" = "$$" ]; then
+            return 0
+        fi
+        if [ -z "$owner" ] || ! kill -0 "$owner" 2>/dev/null; then
+            rm -rf "$lockdir"
+            continue
+        fi
+        if [ "$waited" -ge 60 ]; then
+            log "Libernet busy (start/stop masih berjalan), batal"
+            return 1
+        fi
+        waited=$((waited + 1))
+        sleep 1
+    done
+}
+
+# Matikan SEMUA proses Libernet (v2ray, qload, mihomo, qssh + screen
+# pendampingnya), apa pun modenya. Dipakai saat stop (sapu bersih akhir)
+# dan saat start (bersihkan sisa sesi lama). Tidak menyentuh screen
+# "libernet" (supervisor service.sh sendiri) maupun proses non-Libernet.
+sweep_stale_processes() {
+    # Named kills. killall may be absent on minimal builds: fall back
+    # to pidof+kill so a missing tool cannot silently neuter the sweep.
+    if command -v killall >/dev/null 2>&1; then
+        killall v2ray qload mihomo qssh 2>/dev/null || true
+    else
+        kill $(pidof v2ray qload mihomo qssh 2>/dev/null) 2>/dev/null || true
+    fi
+    screen -S v2ray-client -X quit >/dev/null 2>&1 || true
+    screen -S ping-loop -X quit >/dev/null 2>&1 || true
+
+    for _i in $(seq 1 10); do
+        pidof v2ray >/dev/null || pidof qload >/dev/null || \
+        pidof mihomo >/dev/null || pidof qssh >/dev/null || break
+        sleep 1
+    done
+    if command -v killall >/dev/null 2>&1; then
+        killall -9 v2ray qload mihomo qssh 2>/dev/null || true
+    else
+        kill -9 $(pidof v2ray qload mihomo qssh 2>/dev/null) 2>/dev/null || true
+    fi
+
+    # Port-holder cleanup: whatever still listens on a Libernet SOCKS
+    # port after the named kills is a leftover (e.g. orphan ssh clients
+    # from SSH mode, which no name-based kill covers). Kill by PID.
+    # This is what makes "stop = clean" hold for every mode.
+    for _port in 1080 1081 1082 1083; do
+        _pids=$(netstat -tlnp 2>/dev/null | awk -v addr="127.0.0.1:${_port}" '$4 == addr {split($NF, a, "/"); print a[1]}' | sort -u)
+        [ -n "$_pids" ] && kill $_pids 2>/dev/null
+    done
+    sleep 2
+    for _port in 1080 1081 1082 1083; do
+        _pids=$(netstat -tlnp 2>/dev/null | awk -v addr="127.0.0.1:${_port}" '$4 == addr {split($NF, a, "/"); print a[1]}' | sort -u)
+        [ -n "$_pids" ] && kill -9 $_pids 2>/dev/null
+    done
+
+    # Loud verification: a dirty stop must be visible, not silent.
+    _left=$(pidof v2ray qload mihomo qssh 2>/dev/null)
+    _ports=$(netstat -tlnp 2>/dev/null | grep -E '127.0.0.1:108[0-3] ' || true)
+    if [ -n "$_left" ] || [ -n "$_ports" ]; then
+        log "WARNING: leftover after sweep: PIDs=${_left} ports: ${_ports}"
+    fi
+}
+
 stop_services() {
+    # Kapan log dibersihkan: HANYA stop manual (-ds). Jalur cancel (-c)
+    # dan bersih-bersih gagal (-f) TIDAK memotong log, supaya bukti
+    # kenapa start gagal tetap bisa dibaca.
+    local clear_logs=0
+    case "${1}" in
+        -c)
+            # Cancel = paksa berhenti: pecahkan kunci apa pun, jangan menunggu.
+            rm -rf /tmp/libernet.lock
+            ;;
+        -f)
+            # Bersih-bersih dari jalur gagal (dipanggil proses start yang
+            # sudah memegang kunci): lanjut tanpa kunci baru, tanpa potong log.
+            ;;
+        *)
+            clear_logs=1
+            acquire_lock || return 1
+            ;;
+    esac
     touch /tmp/libernet.manual_stop
     "${LIBERNET_DIR}/bin/log.sh" -s 3
     log "Stopping Libernet service"
@@ -446,9 +582,28 @@ stop_services() {
     "${LIBERNET_DIR}/bin/route-qssh.sh" stop
     log "Removing Mihomo redirect rule"
     "${LIBERNET_DIR}/bin/mihomo.sh" stop
+
+    # Sapu bersih terakhir: jaminan "stop = semua service mati",
+    # apapun modenya dan apapun yang terlewat skrip per-mode di atas.
+    sweep_stale_processes
+
     log '<span style="color: red">Libernet service stopped</span>'
     echo -e "Libernet services stoped!"
     sleep 5
+
+    # Kosongkan semua log setelah stop MANUAL: saat start berikutnya,
+    # semua yang tampil di panel adalah log baru. Semua service sudah
+    # mati di titik ini, jadi tidak ada yang menulis lagi setelah
+    # pemotongan. (Jalur -c/-f sengaja tidak memotong: bukti gagal
+    # start harus tetap terbaca.)
+    if [ "$clear_logs" = 1 ]; then
+        : > "${LIBERNET_DIR}/log/service.log"
+        : > "${LIBERNET_DIR}/log/clash.log"
+        : > /tmp/v2ray.log
+        : > /tmp/qload.log
+        : > /tmp/qssh.log
+    fi
+
     "${LIBERNET_DIR}/bin/log.sh" -s 0
 }
 

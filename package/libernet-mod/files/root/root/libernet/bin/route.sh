@@ -112,7 +112,12 @@ v2ray)
 
     if [ -f "$PROFILE_CFG" ]; then
 
-        SERVER_IP="$(jq -r '.server.address // empty' "$PROFILE_CFG")"
+        # v2ray profile menyimpan alamat server di
+        # .outbounds[0].settings.servers[0].address (bukan .server.address).
+        # Tanpa bypass ini, koneksi v2ray ke servernya sendiri ikut
+        # ter-REDIRECT ke mihomo lalu balik lagi ke v2ray (loop) dan
+        # dial trojan selalu EOF.
+        SERVER_IP="$(jq -r '.outbounds[0].settings.servers[0].address // empty' "$PROFILE_CFG")"
 
     fi
 
@@ -327,6 +332,17 @@ apply_redirect_rules() {
         -p tcp \
         -j REDIRECT \
         --to-ports "$CLASH_PORT"
+
+    #
+    # bypass upstream DNS mihomo (hindari loop redirect ke diri sendiri:
+    # query mihomo ke nameserver-nya harus lolos langsung, bukan
+    # di-REDIRECT balik ke port DNS mihomo sendiri)
+    #
+
+    for NS in 8.8.8.8 8.8.4.4 1.1.1.1 1.0.0.1 9.9.9.9 9.9.9.11; do
+        iptables -t nat -A $LIBERNET_DNS_CHAIN -d "$NS" -p udp --dport 53 -j RETURN
+        iptables -t nat -A $LIBERNET_DNS_CHAIN -d "$NS" -p tcp --dport 53 -j RETURN
+    done
 
     #
     # redirect DNS UDP

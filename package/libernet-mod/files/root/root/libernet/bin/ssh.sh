@@ -71,6 +71,16 @@ load_config() {
     HTTP_IP="$(jq -r '.http.ip // empty' "$SSH_CONFIG")"
     HTTP_PORT="$(jq -r '.http.port // empty' "$SSH_CONFIG")"
 
+    # Edge CloudFront untuk ws-tunnel (jalur handshake WebSocket proper).
+    WS_EDGE_IP="$(jq -r '.http.proxy.ip // empty' "$SSH_CONFIG")"
+    WS_EDGE_PORT="$(jq -r '.http.proxy.port // empty' "$SSH_CONFIG")"
+
+    # Kalau edge IP kosong, resolve dari host (IP otomatis ikut server host)
+    if [ "$ENABLE_HTTP" = "true" ] && [ -z "$WS_EDGE_IP" ] && [ -n "$SSH_HOST" ]; then
+        WS_EDGE_IP="$(nslookup "$SSH_HOST" 2>/dev/null | awk '/^Address: /{print $2}' | grep -E '^[0-9.]+$' | head -n 1)"
+        [ -n "$WS_EDGE_IP" ] && log "WS edge IP resolved from host: $WS_EDGE_IP"
+    fi
+
     WORKERS="$(jq -r '.concurrency.workers // 1' "$SSH_CONFIG")"
     START_PORT="$(jq -r '.concurrency.start_port // 1080' "$SSH_CONFIG")"
 
@@ -93,6 +103,16 @@ load_config() {
 # HTTP proxy
 # ------------------------------
 http_session="http-proxy"
+
+# Pakai ws-tunnel (handshake WebSocket proper + raw pipe) kalau tersedia
+# dan edge terkonfigurasi; kalau tidak, jatuh ke jalur lama
+# (corkscrew + http.py). Alasan: dial manual membuktikan jalur proper
+# mencapai tahap auth (5/6 percobaan), sementara jalur crude tidak
+# pernah sampai auth (0/20+), walau handshake-nya sama-sama kadang 101.
+use_ws_tunnel() {
+    [ -x /usr/bin/ws-tunnel ] && [ -n "$WS_EDGE_IP" ] \
+        && [ -n "$WS_EDGE_PORT" ]
+}
 
 start_http() {
     [ "$ENABLE_HTTP" != "true" ] && return 0
@@ -137,10 +157,15 @@ ssh_worker() {
         set_status CONNECTING
 
         if [ "$ENABLE_HTTP" = "true" ]; then
+            if use_ws_tunnel; then
+                PROXY_CMD="/usr/bin/ws-tunnel $WS_EDGE_IP $WS_EDGE_PORT %h %p"
+            else
+                PROXY_CMD="/usr/bin/corkscrew $HTTP_IP $HTTP_PORT %h %p"
+            fi
             sshpass -p "$SSH_PASS" ssh \
                 -4CND "$SOCKS_PORT" \
                 -p "$SSH_PORT" \
-                -o ProxyCommand="/usr/bin/corkscrew $HTTP_IP $HTTP_PORT %h %p" \
+                -o ProxyCommand="$PROXY_CMD" \
                 -o ConnectTimeout=10 \
                 -o ServerAliveInterval=10 \
                 -o ServerAliveCountMax=2 \
@@ -241,7 +266,7 @@ run() {
 
     log "Config: ${SSH_PROFILE}, Mode: ${SERVICE_NAME}"
 
-    if [ "$ENABLE_HTTP" = "true" ]; then
+    if [ "$ENABLE_HTTP" = "true" ] && ! use_ws_tunnel; then
         start_http || return 1
     fi
 
@@ -282,6 +307,26 @@ stop() {
 
         wait_port_release $((START_PORT+i))
 
+        i=$((i+1))
+    done
+
+    # wait_port_release only waits (and its timeout was ignored): a
+    # port still listening here is held by an orphan whose screen
+    # session is gone, so screen-quit cannot reach it. Kill the
+    # holder by PID (TERM, then KILL after a grace pause).
+    i=0
+    while [ "$i" -lt "$WORKERS" ]; do
+        _port=$((START_PORT+i))
+        _pids=$(netstat -tlnp 2>/dev/null | awk -v addr="127.0.0.1:${_port}" '$4 == addr {split($NF, a, "/"); print a[1]}' | sort -u)
+        [ -n "$_pids" ] && kill $_pids 2>/dev/null
+        i=$((i+1))
+    done
+    sleep 2
+    i=0
+    while [ "$i" -lt "$WORKERS" ]; do
+        _port=$((START_PORT+i))
+        _pids=$(netstat -tlnp 2>/dev/null | awk -v addr="127.0.0.1:${_port}" '$4 == addr {split($NF, a, "/"); print a[1]}' | sort -u)
+        [ -n "$_pids" ] && kill -9 $_pids 2>/dev/null
         i=$((i+1))
     done
 
