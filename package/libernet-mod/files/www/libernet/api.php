@@ -137,9 +137,9 @@ function set_auto_start($status)
         exec(
             'export LIBERNET_DIR="' .
                 $libernet_dir .
-                '" && ' .
+                '" && nohup ' .
                 $libernet_dir .
-                "/bin/service.sh -ea"
+                "/bin/service.sh -ea > /dev/null 2>&1 &"
         );
         $system_config->tunnel->autostart = true;
     } else {
@@ -147,9 +147,9 @@ function set_auto_start($status)
         exec(
             'export LIBERNET_DIR="' .
                 $libernet_dir .
-                '" && ' .
+                '" && nohup ' .
                 $libernet_dir .
-                "/bin/service.sh -da"
+                "/bin/service.sh -da > /dev/null 2>&1 &"
         );
         $system_config->tunnel->autostart = false;
     }
@@ -228,7 +228,7 @@ if (isset($_POST)) {
         case "get_wan_ip":
         
             $json = shell_exec(
-                "curl --socks5-hostname 127.0.0.1:1080 -s http://ip-api.com/json"
+                "curl --socks5-hostname 127.0.0.1:1080 -s --connect-timeout 5 --max-time 10 http://ip-api.com/json"
             );
         
             $data = json_decode($json, true);
