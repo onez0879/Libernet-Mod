@@ -43,6 +43,8 @@ function run() {
 [ -z "$WAN_IP" ] && WAN_IP="0.0.0.0"
 
 sed -i -E 's/"sendThrough":[[:space:]]*"[^"]*"/"sendThrough": "'"$WAN_IP"'"/' "${V2RAY_CONFIG}"
+  # Log baru tiap start (sebelumnya append selamanya tanpa pernah dipotong).
+  : > /tmp/v2ray.log
   screen -AmdS v2ray-client bash -c "while true; do v2ray run -config \"${V2RAY_CONFIG}\" >> /tmp/v2ray.log 2>&1; sleep 3; done" \
     && echo -e "${SERVICE_NAME} service started!"
 }

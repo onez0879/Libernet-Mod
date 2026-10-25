@@ -3,7 +3,7 @@ redir-port: 7892
 allow-lan: true
 bind-address: "*"
 mode: rule
-log-level: info
+log-level: warning
 
 external-controller: 0.0.0.0:9090
 external-ui: config/ui/yacd
@@ -43,7 +43,10 @@ proxy-groups:
     proxies:
       - "Mihomo"
 tun:
-  enable: true
+  # NONAKTIF: tun stack mihomo alpha di box ini mati (gateway 198.18.0.2
+  # tidak menjawab, auto-detect-interface loop ke tun sendiri). Ganti ke
+  # mode REDIRECT (route.sh menerapkan NAT REDIRECT ke redir-port).
+  enable: false
   stack: mixed
   auto-route: true
   auto-detect-interface: true
@@ -51,11 +54,21 @@ tun:
   prefer-h3: true
   dns-hijack:
     - any:53
-    
+
 dns:
   enable: true
   ipv6: false
-  enhanced-mode: redir-host
+  # fake-ip: DNS operator membajak semua query port 53 dan mengembalikan
+  # IP proxy operator (28.0.3.x) yang mati kalau di-dial dari sisi server
+  # tunnel. Dengan fake-ip, klien hanya dapat IP palsu dan mihomo yang
+  # memetakan ke domain lalu dial lewat tunnel (DNS remote di server).
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.0/15
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+    - "*.home.arpa"
+    - "localhost"
   listen: 0.0.0.0:1053
   default-nameserver:
   - 8.8.8.8 #google

@@ -2,6 +2,7 @@ const app = new Vue({
     el: '#app',
     data() {
         return {
+            importPayload: "",
             config: {
                 mode: 0,
                 profile: "",

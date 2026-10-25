@@ -119,9 +119,13 @@ stop() {
 
     killall qload 2>/dev/null
 
-    while pidof qload >/dev/null; do
+    # Tunggu mati baik-baik (maks 10 detik), lalu paksa — jangan sampai
+    # stop menggantung selamanya kalau ada proses yang menolak SIGTERM.
+    for _i in $(seq 1 10); do
+        pidof qload >/dev/null || break
         sleep 1
     done
+    killall -9 qload 2>/dev/null || true
 
     #"${LIBERNET_DIR}/bin/log.sh" -w "${SERVICE_NAME} stopped"
 }

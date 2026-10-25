@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""WebSocket-handshake ProxyCommand for ssh (replaces corkscrew + http.py).
+
+Usage: ws-tunnel edge_ip edge_port dest_host dest_port
+
+Opens a TCP connection to the CloudFront edge, performs a PROPER
+WebSocket handshake (Sec-WebSocket-Key, Version 13) for dest_host, then
+pipes bytes raw in both directions.
+
+Why the handshake matters: the origin is a WebSocket server behind
+CloudFront. The old path (corkscrew -> http.py) sends a crude GET with
+no Sec-WebSocket-Key and the origin answers it unreliably (sometimes
+the stream dies mid-KEX, sometimes at the banner, sometimes 502).
+A valid handshake reliably returns 101 and the stream then stays up.
+
+Why raw after 101 (no WS framing): after the handshake the pipe is raw
+TCP. Proof: through http.py, ssh parsed the server's banner and KEXINIT
+as plain SSH bytes -- if the origin framed its output, ssh could never
+have read them. Wrapping ssh bytes in WS frames (the first version of
+this script) therefore broke the banner exchange: Dropbear received
+frame headers instead of "SSH-2.0-..." and never answered.
+"""
+
+import base64
+import os
+import socket
+import sys
+import threading
+
+
+def write_all(fd, data):
+    while data:
+        n = os.write(fd, data)
+        data = data[n:]
+
+
+def pump(src_fd, dst_fd, sock):
+    try:
+        while True:
+            data = os.read(src_fd, 16384)
+            if not data:
+                break
+            write_all(dst_fd, data)
+    except OSError:
+        pass
+    finally:
+        try:
+            sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+
+
+def main():
+    if len(sys.argv) < 5:
+        sys.stderr.write(
+            "usage: ws-tunnel edge_ip edge_port dest_host dest_port\n")
+        return 1
+    edge_ip, edge_port = sys.argv[1], int(sys.argv[2])
+    dest_host, dest_port = sys.argv[3], sys.argv[4]
+
+    try:
+        sock = socket.create_connection((edge_ip, edge_port), timeout=15)
+    except OSError as e:
+        sys.stderr.write("ws-tunnel: cannot connect to edge: %s\n" % e)
+        return 1
+
+    key = base64.b64encode(os.urandom(16)).decode()
+    req = (
+        "GET / HTTP/1.1\r\n"
+        "Host: " + dest_host + "\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: Upgrade\r\n"
+        "Sec-WebSocket-Key: " + key + "\r\n"
+        "Sec-WebSocket-Version: 13\r\n"
+        "\r\n"
+    )
+    try:
+        sock.sendall(req.encode("ascii"))
+        resp = b""
+        sock.settimeout(15)
+        while b"\r\n\r\n" not in resp:
+            chunk = sock.recv(4096)
+            if not chunk:
+                sys.stderr.write("ws-tunnel: edge closed handshake\n")
+                return 1
+            resp += chunk
+        first_line = resp.split(b"\r\n", 1)[0].decode("ascii", "replace")
+        sock.settimeout(None)
+    except OSError as e:
+        sys.stderr.write("ws-tunnel: handshake failed: %s\n" % e)
+        return 1
+
+    if not (" 101 " in (" " + first_line + " ")
+            or first_line.endswith(" 101")
+            or " 200 " in (" " + first_line + " ")
+            or first_line.endswith(" 200")):
+        sys.stderr.write("ws-tunnel: unexpected handshake: %s\n" % first_line)
+        return 1
+
+    t1 = threading.Thread(target=pump, args=(0, sock.fileno(), sock),
+                          daemon=True)
+    t2 = threading.Thread(target=pump, args=(sock.fileno(), 1, sock),
+                          daemon=True)
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -20,7 +20,7 @@ define Package/libernet-mod
   DEPENDS:=+bash +curl +librt +libpthread +coreutils +coreutils-stdbuf +screen \
 	+jq +ip-full +iptables-nft +openssh-client +dnsmasq-full +stubby \
 	+php8 +php8-cgi +php8-mod-session +python3 +httping +https-dns-proxy \
-	+stunnel +v2ray-core +openvpn-openssl
+	+stunnel +v2ray-core +openvpn-openssl +kmod-tun +shadowsocks-libev-ss-local +php8-cli
 endef
 
 define Package/libernet-mod/description

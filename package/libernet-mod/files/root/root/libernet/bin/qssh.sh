@@ -114,12 +114,13 @@ run() {
 
     sleep 1
 
-    if ! pidof q-load >/dev/null 2>&1; then
+    if ! pidof qload >/dev/null 2>&1; then
 
         "${LIBERNET_DIR}/bin/log.sh" \
         -w "Failed to start Q-LOAD"
 
         killall qssh 2>/dev/null
+        killall qload 2>/dev/null
 
         return 1
 
@@ -136,12 +137,27 @@ stop() {
     "${LIBERNET_DIR}/bin/log.sh" \
     -w "Stopping ${SERVICE_NAME} service"
 
-    killall q-load 2>/dev/null
-    killall qssh 2>/dev/null
+    # Kill by name. killall may be absent on minimal builds: fall back
+    # to pidof+kill so a missing tool cannot silently neuter the stop.
+    # The old unbounded wait below hung stop forever when a kill
+    # missed, so the sweep + lock release never ran.
+    if command -v killall >/dev/null 2>&1; then
+        killall qload 2>/dev/null
+        killall qssh 2>/dev/null
+    else
+        kill $(pidof qload qssh 2>/dev/null) 2>/dev/null
+    fi
 
-    while pidof q-load >/dev/null || pidof qssh >/dev/null; do
+    for _i in $(seq 1 10); do
+        pidof qload >/dev/null || pidof qssh >/dev/null || break
         sleep 1
     done
+    if command -v killall >/dev/null 2>&1; then
+        killall -9 qload 2>/dev/null
+        killall -9 qssh 2>/dev/null
+    else
+        kill -9 $(pidof qload qssh 2>/dev/null) 2>/dev/null
+    fi
 
     "${LIBERNET_DIR}/bin/log.sh" \
     -w "${SERVICE_NAME} service stopped"
