@@ -199,9 +199,9 @@ if (isset($_POST)) {
             exec(
                 "export LIBERNET_DIR=" .
                     $libernet_dir .
-                    " && " .
+                    " && nohup " .
                     $libernet_dir .
-                    "/bin/service.sh -sl"
+                    "/bin/service.sh -sl > /dev/null 2>&1 &"
             );
             json_response("Libernet service started");
             break;
@@ -209,9 +209,9 @@ if (isset($_POST)) {
             exec(
                 'export LIBERNET_DIR="' .
                     $libernet_dir .
-                    '" && ' .
+                    '" && nohup ' .
                     $libernet_dir .
-                    "/bin/service.sh -cl"
+                    "/bin/service.sh -cl > /dev/null 2>&1 &"
             );
             json_response("Libernet service canceled");
             break;
@@ -219,9 +219,9 @@ if (isset($_POST)) {
             exec(
                 'export LIBERNET_DIR="' .
                     $libernet_dir .
-                    '" && ' .
+                    '" && nohup ' .
                     $libernet_dir .
-                    "/bin/service.sh -ds"
+                    "/bin/service.sh -ds > /dev/null 2>&1 &"
             );
             json_response("Libernet service stopped");
             break;
