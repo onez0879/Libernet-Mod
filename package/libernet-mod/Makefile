@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libernet-mod
-PKG_VERSION:=2026.11.16.1
+PKG_VERSION:=2026.11.16.2
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
@@ -20,7 +20,7 @@ define Package/libernet-mod
   DEPENDS:=+bash +curl +librt +libpthread +coreutils +coreutils-stdbuf +screen \
 	+jq +ip-full +iptables-nft +openssh-client +dnsmasq-full +stubby \
 	+php8 +php8-cgi +php8-mod-session +python3 +httping +https-dns-proxy \
-	+stunnel +v2ray-core +openvpn-openssl +kmod-tun +shadowsocks-libev-ss-local +php8-cli
+	+stunnel +v2ray-core +openvpn-openssl +kmod-tun +php8-cli
 endef
 
 define Package/libernet-mod/description
