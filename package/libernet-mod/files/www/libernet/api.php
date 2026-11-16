@@ -53,7 +53,12 @@ function get_profiles($mode)
 {
     global $libernet_dir;
     $profiles = [];
-    if ($handle = opendir($libernet_dir . "/bin/config/" . $mode . "/")) {
+    $dir = $libernet_dir . "/bin/config/" . $mode . "/";
+    if (!is_dir($dir)) {
+        json_response($profiles);
+        return;
+    }
+    if ($handle = opendir($dir)) {
         while (false !== ($file = readdir($handle))) {
             if (
                 $file != "." &&
