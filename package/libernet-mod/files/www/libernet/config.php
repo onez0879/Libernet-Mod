@@ -325,6 +325,40 @@
                                     </div>
                             
                                 </div>                            
+                                <!-- SlowDNS (DNS Tunnel) -->
+                                <div class="form-row pb-lg-2">
+                                    <div class="col-md-12">
+                                        <label>SlowDNS &mdash; DNS Resolver</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               placeholder="112.215.198.254 (kosong = nonaktif)"
+                                               v-model="config.temp.modes[2].profile.dns.nameserver">
+                                    </div>
+                                </div>
+                                <div class="form-row pb-lg-2">
+                                    <div class="col-md-8">
+                                        <label>NS Domain</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               placeholder="ns-sg-melbi.toko-vpn.my.id"
+                                               v-model="config.temp.modes[2].profile.dns.target_domain">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label>Query Type</label>
+                                        <select class="form-control"
+                                                v-model="config.temp.modes[2].profile.dns.query_type">
+                                            <option value="TXT">TXT</option>
+                                            <option value="NULL">NULL</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group pb-lg-2">
+                                    <label>Public Key (64 hex)</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           placeholder="64 karakter hex public key server"
+                                           v-model="config.temp.modes[2].profile.dns.pubkey">
+                                </div>
                                 <!-- SSH -->
                                 <div class="form-row pb-lg-2">
                             

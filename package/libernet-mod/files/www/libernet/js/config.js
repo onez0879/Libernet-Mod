@@ -165,6 +165,12 @@ const app = new Vue({
                                     request: "",
                                     expect: ["200", "101"]
                                 },
+                                dns: {
+                                    nameserver: "",
+                                    target_domain: "",
+                                    pubkey: "",
+                                    query_type: "TXT"
+                                },
                                 ip: ""
                             }
                         }
