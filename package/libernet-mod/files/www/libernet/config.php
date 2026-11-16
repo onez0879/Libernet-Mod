@@ -325,40 +325,6 @@
                                     </div>
                             
                                 </div>                            
-                                <!-- SlowDNS (DNS Tunnel) -->
-                                <div class="form-row pb-lg-2">
-                                    <div class="col-md-12">
-                                        <label>SlowDNS &mdash; DNS Resolver</label>
-                                        <input type="text"
-                                               class="form-control"
-                                               placeholder="112.215.198.254 (kosong = nonaktif)"
-                                               v-model="config.temp.modes[2].profile.dns.nameserver">
-                                    </div>
-                                </div>
-                                <div class="form-row pb-lg-2">
-                                    <div class="col-md-8">
-                                        <label>NS Domain</label>
-                                        <input type="text"
-                                               class="form-control"
-                                               placeholder="ns-sg-melbi.toko-vpn.my.id"
-                                               v-model="config.temp.modes[2].profile.dns.target_domain">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label>Query Type</label>
-                                        <select class="form-control"
-                                                v-model="config.temp.modes[2].profile.dns.query_type">
-                                            <option value="TXT">TXT</option>
-                                            <option value="NULL">NULL</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-group pb-lg-2">
-                                    <label>Public Key (64 hex)</label>
-                                    <input type="text"
-                                           class="form-control"
-                                           placeholder="64 karakter hex public key server"
-                                           v-model="config.temp.modes[2].profile.dns.pubkey">
-                                </div>
                                 <!-- SSH -->
                                 <div class="form-row pb-lg-2">
                             
@@ -424,6 +390,103 @@
 
                             
                             </div>                 
+                            <!-- SLOWDNS -->
+                            <div v-if="config.temp.mode === 3" class="slowdns pb-lg-2">
+
+                                <!-- DNS Tunnel -->
+                                <div class="form-row pb-lg-2">
+                                    <div class="col-md-8">
+                                        <label>DNS Resolver</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               placeholder="112.215.198.254"
+                                               v-model="config.temp.modes[3].profile.dns.nameserver"
+                                               required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label>Query Type</label>
+                                        <select class="form-control"
+                                                v-model="config.temp.modes[3].profile.dns.query_type">
+                                            <option value="TXT">TXT</option>
+                                            <option value="NULL">NULL</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group pb-lg-2">
+                                    <label>NS Domain</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           placeholder="ns-sg-melbi.toko-vpn.my.id"
+                                           v-model="config.temp.modes[3].profile.dns.target_domain"
+                                           required>
+                                </div>
+
+                                <div class="form-group pb-lg-2">
+                                    <label>Public Key (64 hex)</label>
+                                    <input type="text"
+                                           class="form-control"
+                                           placeholder="Public key server"
+                                           v-model="config.temp.modes[3].profile.dns.pubkey"
+                                           required>
+                                </div>
+
+                                <!-- SSH -->
+                                <div class="form-row pb-lg-2">
+                                    <div class="col-md-6">
+                                        <label>SSH Host</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               placeholder="Host/IP"
+                                               v-model="config.temp.modes[3].profile.ssh.host"
+                                               @input="resolveServerHost"
+                                               required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label>Server IP</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               placeholder="otomatis"
+                                               v-model="config.temp.modes[3].profile.ssh.ip">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label>SSH Port</label>
+                                        <input type="number"
+                                               class="form-control"
+                                               placeholder="22"
+                                               v-model.number="config.temp.modes[3].profile.ssh.port"
+                                               required>
+                                    </div>
+                                </div>
+
+                                <div class="form-row pb-lg-2">
+                                    <div class="col-md-5">
+                                        <label>Username</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               placeholder="Username"
+                                               v-model="config.temp.modes[3].profile.ssh.username"
+                                               required>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label>Password</label>
+                                        <input type="text"
+                                               class="form-control"
+                                               placeholder="Password"
+                                               v-model="config.temp.modes[3].profile.ssh.password"
+                                               required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label>Workers</label>
+                                        <input type="number"
+                                               class="form-control"
+                                               min="1"
+                                               max="10"
+                                               v-model.number="config.temp.modes[3].profile.concurrency.workers">
+                                    </div>
+                                </div>
+
+                            </div>
                             <div class="form-group pb-lg-2 text-center">
                                 <label>Config Name</label>
                                 <input type="text"

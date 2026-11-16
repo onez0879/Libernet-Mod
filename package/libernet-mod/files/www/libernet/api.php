@@ -191,6 +191,13 @@ if (isset($_POST)) {
         case "get_qssh_configs":
             get_profiles("qssh");
             break;           
+        case "get_slowdns_config":
+            $profile = $json["profile"];
+            get_config("slowdns", $profile);
+            break;
+        case "get_slowdns_configs":
+            get_profiles("slowdns");
+            break;
         case "start_libernet":
             $system_config = file_get_contents(
                 $libernet_dir . "/system/config.json"
@@ -601,6 +608,20 @@ if (isset($_POST)) {
                         
                             json_response("QSSH config saved");
                             break;
+                        // slowdns
+                        case 3:
+                            file_put_contents(
+                                $libernet_dir .
+                                    "/bin/config/slowdns/" .
+                                    $profile .
+                                    ".json",
+                                json_encode(
+                                    $config,
+                                    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+                                )
+                            );
+                            json_response("SLOWDNS config saved");
+                            break;
                       }  
                      }  
                      break;
@@ -668,6 +689,21 @@ if (isset($_POST)) {
                         $system_config->network->qload->port = 7777;
                     
                     break;                          
+                    // slowdns
+                    case 3:
+                        $slowdns_config = file_get_contents(
+                            $libernet_dir .
+                                "/bin/config/slowdns/" .
+                                $profile .
+                                ".json"
+                        );
+                        $slowdns_config = json_decode($slowdns_config);
+                        $system_config->tunnel->profile->slowdns = $profile;
+                        $system_config->server = $slowdns_config->ssh->ip;
+                        $system_config->network->socks->ip = "127.0.0.1";
+                        $system_config->network->socks->port = 1080;
+                        $system_config->network->qload->port = 7777;
+                    break;
                         }
                         $system_config->tunnel->mode = $mode;
                         $system_config = json_encode(
@@ -719,6 +755,15 @@ if (isset($_POST)) {
                         json_response("QSSH config removed");
                     
                     break;                        
+                    case 3:
+                        unlink(
+                            $libernet_dir .
+                                "/bin/config/slowdns/" .
+                                $profile .
+                                ".json"
+                        );
+                        json_response("SLOWDNS config removed");
+                        break;
                 }
             }
             break;

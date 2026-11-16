@@ -154,6 +154,9 @@ restartLibernet() {
                 case 2:
                     action = "get_qssh_configs"
                     break
+                case 3:
+                    action = "get_slowdns_configs"
+                    break
                 case 1:
                     action = "get_v2ray_configs"
                     break
@@ -377,6 +380,11 @@ created() {
             case 2:
                 this.config.profile =
                     res.tunnel.profile.qssh
+                break
+
+            case 3:
+                this.config.profile =
+                    res.tunnel.profile.slowdns
                 break
 
             case 1:

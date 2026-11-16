@@ -391,6 +391,33 @@ ssh_service() {
     run_other_services
 }
 
+slowdns_service() {
+    wait_wan || {
+        log "WAN failed"
+        return 1
+    }
+
+    log "Starting SLOWDNS..."
+
+    "${LIBERNET_DIR}/bin/slowdns.sh" -r || {
+        log "SLOWDNS failed"
+        stop_services -f
+        return 1
+    }
+
+    start_mihomo || {
+        stop_services -f
+        return 1
+    }
+
+    mark_connected || {
+        stop_services -f
+        return 1
+    }
+
+    run_other_services
+}
+
 qssh_service() {
     wait_wan || {
         log "WAN failed"
@@ -451,6 +478,7 @@ start_services() {
         "0") ssh_service ;;
         "1") v2ray_service ;;
         "2") qssh_service ;;
+        "3") slowdns_service ;;
     esac
 
     if ${CONNECTED}; then
@@ -569,6 +597,7 @@ stop_services() {
         "0") "${LIBERNET_DIR}/bin/ssh.sh" -s ;;
         "1") "${LIBERNET_DIR}/bin/v2ray.sh" -s ;;
         "2") "${LIBERNET_DIR}/bin/qssh.sh" -s ;;
+        "3") "${LIBERNET_DIR}/bin/slowdns.sh" -s ;;
     esac
     
    "${LIBERNET_DIR}/bin/qload.sh" -s

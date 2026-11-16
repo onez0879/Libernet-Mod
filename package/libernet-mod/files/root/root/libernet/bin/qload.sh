@@ -27,6 +27,14 @@ case "$TUNNEL_MODE" in
 
         ;;
 
+    # SLOWDNS pakai profil slowdns sendiri
+    3)
+
+        SLOWDNS_PROFILE="$(jq -r '.tunnel.profile.slowdns' "$SYSTEM_CONFIG")"
+        PROFILE_CONFIG="${LIBERNET_DIR}/bin/config/slowdns/${SLOWDNS_PROFILE}.json"
+
+        ;;
+
     *)
 
         # Mode belum dikenali: fallback ke profil SSH, bukan exit buta

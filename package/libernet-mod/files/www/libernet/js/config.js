@@ -165,11 +165,54 @@ const app = new Vue({
                                     request: "",
                                     expect: ["200", "101"]
                                 },
+                                ip: ""
+                            }
+                        },
+                    
+                        {
+                            value: 3,
+                            name: "SLOWDNS",
+                            profile: {
+                                listen: {
+                                    host: "127.0.0.1",
+                                    port: 1080
+                                },
+                                concurrency: {
+                                    enable: true,
+                                    workers: 1,
+                                    start_port: 1080
+                                },
+                                ssh: {
+                                    host: "",
+                                    ip: "",
+                                    port: 22,
+                                    username: "",
+                                    password: ""
+                                },
+                                network: {
+                                    type: "tcp"
+                                },
                                 dns: {
                                     nameserver: "",
                                     target_domain: "",
                                     pubkey: "",
                                     query_type: "TXT"
+                                },
+                                transport: {
+                                    tls: false,
+                                    host: "",
+                                    path: "/",
+                                    sni: ""
+                                },
+                                proxy: {
+                                    enable: false,
+                                    host: "",
+                                    port: 0
+                                },
+                                payload: {
+                                    enable: false,
+                                    request: "",
+                                    expect: []
                                 },
                                 ip: ""
                             }
@@ -208,6 +251,9 @@ const app = new Vue({
                 case 2:
                     action = "get_qssh_configs"
                     break
+                case 3:
+                    action = "get_slowdns_configs"
+                    break
             }
             axios.post('api.php', {
                 action: action
@@ -227,6 +273,9 @@ const app = new Vue({
                         break
                     case 2:
                         this.getQsshConfig()
+                        break
+                    case 3:
+                        this.getSlowdnsConfig()
                         break
                 }
                 // ensure temp.mode follows config.mode so form always matches
@@ -384,6 +433,17 @@ const app = new Vue({
             })
         
         },        
+        getSlowdnsConfig() {
+            axios.post('api.php', {
+                action: "get_slowdns_config",
+                profile: this.config.profile
+            }).then((res) => {
+                const temp = this.config.temp
+                temp.mode = 3
+                temp.profile = this.config.profile
+                temp.modes[3].profile = res.data.data
+            })
+        },
         getSystemConfig() {
             return new Promise((resolve) => {
                 axios.post('api.php', {
@@ -409,6 +469,10 @@ const app = new Vue({
                 case 2:
                     config = this.config.temp.modes[2].profile
                     title = "QSSH config has been saved"
+                    break
+                case 3:
+                    config = this.config.temp.modes[3].profile
+                    title = "SLOWDNS config has been saved"
                     break
             }
             axios.post('api.php', {

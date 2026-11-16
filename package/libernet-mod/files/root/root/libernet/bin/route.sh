@@ -34,6 +34,7 @@ get_mode_name() {
         0) echo ssh ;;
         1) echo v2ray ;;
         2) echo qssh ;;
+        3) echo slowdns ;;
 
         *) echo unknown ;;
     esac
@@ -81,6 +82,28 @@ qssh)
         SERVER_IP="$(jq -r '.ip // empty' "$PROFILE_CFG")"
 
         PROXY_IP="$(jq -r '.proxy.host // empty' "$PROFILE_CFG")"
+
+        QLOAD_PORT="$(jq -r '.qload_port // 7777' "$PROFILE_CFG")"
+
+        WORKER_START="$(jq -r '.concurrency.start_port // 1080' "$PROFILE_CFG")"
+
+        WORKER_COUNT="$(jq -r '.concurrency.workers // 1' "$PROFILE_CFG")"
+
+    fi
+
+;;
+
+slowdns)
+
+    PROFILE="$(json '.tunnel.profile.slowdns')"
+
+    PROFILE_CFG="$LIBERNET_DIR/bin/config/slowdns/$PROFILE.json"
+
+    if [ -f "$PROFILE_CFG" ]; then
+
+        SERVER_IP="$(jq -r '.ssh.ip // empty' "$PROFILE_CFG")"
+
+        PROXY_IP=""
 
         QLOAD_PORT="$(jq -r '.qload_port // 7777' "$PROFILE_CFG")"
 
